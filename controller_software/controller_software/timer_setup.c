@@ -4,9 +4,9 @@
  * Created: 14/09/2018 8:53:20 AM
  * Author: Oliver K jkim838 846548800
  *
- * Revision 1.1.3
+ * Revision 1.1.4
  *
- * This header file contains prototyping for functions related to Timer and PWM.
+ * This header file contains definitions for functions related to Timer and PWM.
  *
  */ 
 
