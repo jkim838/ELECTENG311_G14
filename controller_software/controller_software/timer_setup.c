@@ -4,9 +4,9 @@
  * Created: 14/09/2018 8:53:20 AM
  * Author: Oliver K jkim838 846548800
  *
- * Revision 1.1.3
+ * Revision 1.1.5
  *
- * This header file contains prototyping for functions related to Timer and PWM.
+ * This script file contains definitions for functions related to Timer and PWM.
  *
  */ 
 
@@ -45,8 +45,8 @@ void timer_init(){
 	/*** Clock Select Bits ***/
 	// NOTES: CHANGE PRESCALER VALUE IF WE WANT TO PRODUCE SMALLER COUNT
 	TCCR0B |= (1 << CS02);			// Pre-scaler 256
-	TCCR0B &= ~(1 << CS01);			// 8MHz / 256 = 31.25 KHz
-	TCCR0B &= ~(1 << CS00);
+	TCCR0B &= ~(1 << CS01);			// Timer Frequency = 62.5 KHz @Xplained Mini (F_CPU = 16MHz)
+	TCCR0B &= ~(1 << CS00);			// Timer Frequency = 31.25 KHz @PCB (F_CPU = 8MHz)
 	
 	// A match between OCR0A and TCNT0 will call interrupt, or generate waveform output on OC0A pin
 	
