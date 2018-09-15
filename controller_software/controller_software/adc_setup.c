@@ -4,9 +4,9 @@
  * Created: 9/14/2018 18:17:46
  * Author: Oliver K jkim838 846548800
  *
- * Revision 1.1.4
+ * Revision 1.1.5
  *
- * This header file contains definitions for functions related to Analog to Digital Converter.
+ * This script file contains definitions for functions related to Analog to Digital Converter.
  */ 
 
 /*** Header Files ***/
@@ -50,8 +50,8 @@ void adc_init(){
 	ADCSRA |= (1 << ADIE);			// Interrupt 'On'
 	/* Pre-scaler Setup */
 	ADCSRA |= (1 << ADPS2);			// Pre-scaler Division factor to 64
-	ADCSRA |= (1 << ADPS1);
-	ADCSRA &=~(1 << ADPS0);
+	ADCSRA |= (1 << ADPS1);			// ADC Frequency = 250 KHz @Xplained Mini (F_CPU 16MHz)
+	ADCSRA &=~(1 << ADPS0);			// ADC Frequency = 125 KHz @PCB (F_CPU 8MHz)
 	
 	/** ADCSRB: ADC Control and Status Register B **/
 	/* ADC Auto Trigger Source */
