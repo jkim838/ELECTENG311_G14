@@ -13,6 +13,8 @@
 /*** Header Files ***/
 #include <avr/io.h>
 #include <stdint.h>
+#include <stdbool.h>
+#include <stdio.h>
 
 /*** Custom Header Files ***/
 #include "debug_usart.h"
@@ -24,6 +26,7 @@
 
 /*** Delay Header ***/
 #include <util/delay.h>
+
 
 /*** Function Definitions ***/
 void debug_usart_init(uint16_t UBRR){
@@ -57,24 +60,24 @@ void debug_usart_transmit(uint8_t data){
 	
 	while (DATA_REG_IS_FULL);		// Waits for the UDR register to be empty.
 	UDR0 = data;					// Transmits the data.
-	_delay_ms(20);
 
 }
 
-void debug_usart_decompose_transmit(uint8_t *output, double input){
+void debug_usart_decompose(uint8_t *output, double input){
 	
-	input = input * 1000;
-	output[3] = (uint16_t)(input / 1000);
-	output[2] = (uint16_t)(input / 100) % 100;
+	input = input * 100;
+	output[2] = (uint16_t)(input / 100);
 	output[1] = (uint16_t)(input / 10) % 10;
 	output[0] = (uint16_t)input % 10;
 	
-	debug_usart_transmit(output[3] + ASCII_CONVERT);
-	debug_usart_transmit('.');
-	debug_usart_transmit(output[2] + ASCII_CONVERT);
-	debug_usart_transmit(output[1] + ASCII_CONVERT);
-	debug_usart_transmit(output[0] + ASCII_CONVERT);
-	debug_usart_transmit('V');
-	debug_usart_transmit(' ');
-	
+}
+
+int usart_putchar_printf(char var, FILE *stream){
+
+	if(var == '\n'){
+		debug_usart_transmit('\r');
+	}
+	debug_usart_transmit(var);
+	return 0;	
+
 }

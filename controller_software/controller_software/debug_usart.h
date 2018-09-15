@@ -15,4 +15,5 @@
 /*** Function Prototypes ***/
 void debug_usart_init(uint16_t UBRR);
 void debug_usart_transmit(uint8_t data);
-void debug_usart_decompose_transmit(uint8_t *output, double input);
+void debug_usart_decompose(uint8_t *output, double input);
+int usart_putchar_printf(char var, FILE *stream);

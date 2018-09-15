@@ -3,7 +3,7 @@
  *
  * Created: 14/09/2018 8:12:55 AM
  * Author : Oliver K. jkim838 846548800
- * Revision 1.1.5
+ * Revision 1.1.6
  *
  * Description:
  * Primary program to control the operation condition of the linear compressor motor unit.
@@ -28,8 +28,8 @@
 #define ENABLE_DEBUGGING_PARAMETER
 #define XPLAINED_MINI_LED_STROBE
 #define TIMER_DEBUG_MODE
-#define ADC_DEBUG_MODE
-#ifdef ADC_DEBUG_MODE
+#define ADC_DEBUG_MODE_MASTER
+#ifdef ADC_DEBUG_MODE_MASTER
 	#define BAUD_RATE 9600
 	#define debug_UBRR F_CPU / 16 / BAUD_RATE -1
 	#define debug_ADC_RESOLUTION 1024
@@ -40,6 +40,7 @@
 #ifdef MAIN_DEBUG_MODE
 	#include <util/delay.h>
 	#include "debug_usart.h"		// Contains functions to debug ADC with USART Transmission
+	#include <stdbool.h>
 #endif
 
 /* ISR Variable Definitions */
@@ -48,7 +49,9 @@ volatile uint8_t data_collected = 0;
 volatile uint8_t raw_coil_voltage;
 volatile uint8_t raw_coil_current;
 #ifdef ADC_DEBUG_MODE
-	volatile uint8_t raw_ADC_output_test;
+	int usart_putchar_printf(char var, FILE *stream);
+	static FILE mystdout = FDEV_SETUP_STREAM(usart_putchar_printf, NULL, _FDEV_SETUP_WRITE);
+	uint16_t raw_ADC_output_test;
 #endif
 
 int main(void){
@@ -71,6 +74,7 @@ int main(void){
 	timer_init();	// Set up Timer and Pulse Width Modulation.
 	adc_init();		// Set up ADC
 	#ifdef ADC_DEBUG_MODE
+		stdout = &mystdout;
 		// enable USART for transmitting digital conversion result to PuTTy...
 		debug_usart_init(debug_UBRR);
 	#endif
@@ -87,11 +91,15 @@ int main(void){
 		
 		#ifdef MAIN_DEBUG_MODE
 		//debug mode... ignore normal operational cycle
-			#ifdef ADC_DEBUG_MODE
+			#ifdef ADC_DEBUG_MODE_MASTER
 				// try analog to digital conversion on the ADC, and display its output to the PuTTy.
-				uint8_t decomposed_digits[4];
-				double ADC_output_test = raw_ADC_output_test * (debug_ADC_REFERENCE_VOLTAGE / debug_ADC_RESOLUTION);
-				debug_usart_decompose_transmit(decomposed_digits, ADC_output_test);
+				cli();
+				printf("Raw ADC Output Value: %d", raw_ADC_output_test);
+ 				uint8_t decomposed_digits[3];
+ 				double ADC_output_test = (double)raw_ADC_output_test * debug_ADC_REFERENCE_VOLTAGE / debug_ADC_RESOLUTION;
+				printf(" Digitized ADC Output Value: %f\n", ADC_output_test);
+// 				debug_usart_decompose(decomposed_digits, ADC_output_test);
+				sei();
 			#endif
 		
 		#else
@@ -137,13 +145,13 @@ ISR(TIMER0_OVF_vect){
 /*** Analog to Digital Conversion Complete Interrupt ***/
 ISR(ADC_vect){
 	
-	#ifdef ADC_DEBUG_MODE
+	#ifdef ADC_DEBUG_MODE_MASTER
 	// Debugger Mode...
 	// ADC channel switch mode is disabled for the purpose of debugging the ADC.
 	// When conversion for right hall effect sensor is complete
 		raw_ADC_output_test = ADC;
+		PORTB ^= (1 << PB3);
 		ADCSRA |= (1 << ADSC);
-		
 	#else
 		// Normal Operation Mode...
 		// When conversion for left hall effect sensor is complete...
