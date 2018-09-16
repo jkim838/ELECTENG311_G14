@@ -16,6 +16,7 @@
 
 /*** Custom Header Files ***/
 #include "timer_setup.h"
+#include "Macro_Definitions.h"
 
 /*** Custom Macro Definition ***/
 
