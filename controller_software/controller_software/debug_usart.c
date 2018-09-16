@@ -18,11 +18,7 @@
 
 /*** Custom Header Files ***/
 #include "debug_usart.h"
-
-/*** Custom Macro Definitions ***/
-#define F_CPU 16000000UL							// Define CPU Operational Clock
-#define DATA_REG_IS_FULL !((1 << UDRE0) & UCSR0A)
-#define ASCII_CONVERT 48							// Convert to ASCII Characters
+#include "Macro_Definitions.h"
 
 /*** Delay Header ***/
 #include <util/delay.h>

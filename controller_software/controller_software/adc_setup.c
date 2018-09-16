@@ -15,12 +15,7 @@
 
 /*** Custom Header Files ***/
 #include "adc_setup.h"
-
-
-/*** Custom Macro Definitions ***/
-#define ADC_RESOLUTION 1024			// define resolution for analog-to-digital converter.
-#define ADC_REFERENCE_VOLTAGE 5		// define reference voltage for analog-to-digital converter.
-//#define ADC_ENABLE_AUTO_TRIGGER
+#include "Macro_Definitions.h"
 
 /*** Function Definitions ***/
 void adc_init(){
@@ -33,11 +28,19 @@ void adc_init(){
 	ADMUX &= ~(1 << ADLAR);			// Right adjust ADC reading to ADCH
 	/* Analog Channel Selection Bits */
 	// Change input pin as specified by the data sheet...
-	ADMUX &= ~(1 << MUX3);			// Channel 5 (Right Hall Effect Sensor): Input pin is PC5
-	ADMUX |=  (1 << MUX2);
-	ADMUX &= ~(1 << MUX1);
-	ADMUX |=  (1 << MUX0);
-	ADC_next_channel = 5;
+	#ifdef DISABLE_HALL_EFFECT_SENSORS
+		ADMUX &= ~(1 << MUX3);							// Channel 2 (Coil Voltage Sensor): Input pin is PC2
+		ADMUX &= ~(1 << MUX2);
+		ADMUX |=  (1 << MUX1);
+		ADMUX &= ~(1 << MUX0);
+		ADC_next_channel = ADC_COIL_VOLTAGE_CHANNEL;	// Note: Although it is named ADC_next_channel, in this function specifically this variable signifies initial state of the ADC Channel.
+	#else
+		ADMUX &= ~(1 << MUX3);							// Channel 5 (Right Hall Effect Sensor): Input pin is PC5
+		ADMUX |=  (1 << MUX2);
+		ADMUX &= ~(1 << MUX1);
+		ADMUX |=  (1 << MUX0);
+		ADC_next_channel = ADC_RIGHT_HALL_CHANNEL;		// Note: Although it is named ADC_next_channel, in this function specifically this variable signifies initial state of the ADC Channel.
+	#endif
 	
 	/** ADCSRA: ADC Control and Status Register A **/
 	/* ADC Enable */
