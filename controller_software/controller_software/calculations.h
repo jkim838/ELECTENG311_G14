@@ -12,4 +12,4 @@
 double calculate_length(volatile uint8_t* raw_hall_voltage_address);
 double calculate_period(volatile uint8_t* raw_hall_voltage_address);
 double calculate_flow_rate(uint8_t parameter1, uint8_t parameter2);
-double calculate_power(uint8_t raw_coil_voltage, uint8_t raw_coil_current, double PWM_live_time, double cycle_period);
+double calculate_power(double coil_voltage, double coil_current, double PWM_live_time, double cycle_period);

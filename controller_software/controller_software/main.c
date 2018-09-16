@@ -32,6 +32,9 @@
 #ifdef ADC_DEBUG_MODE_MASTER
 	#define BAUD_RATE 9600
 	#define debug_UBRR F_CPU / 16 / BAUD_RATE -1
+	#define debug_PWM_LIVE_TIME 0.006
+	#define debug_PWM_PERIOD 0.02 // Period of the PWM. Not the period of the Motor
+	#define debug_COIL_CURRENT 0.5 // Be mindful that this is a voltage level across the Current Shunt Resistor
 #endif
 
 /*** Debugger Header ***/
@@ -98,7 +101,10 @@ int main(void){
 				printf("Current ADC Channel: %d\n", debug_ADC_channel);
 				printf("Next ADC Channel: %d\n", ADC_next_channel);
 				printf("Raw ADC Output: %d\n", raw_ADC_output);
-				printf("Digitized ADC Output: %f\n\n", debug_adc_digitize(raw_ADC_output));
+				double digitized_adc_output = debug_adc_digitize(raw_ADC_output);
+				printf("Digitized ADC Output: %fV\n",digitized_adc_output);
+				double expected_power = calculate_power(digitized_adc_output, debug_COIL_CURRENT, debug_PWM_LIVE_TIME, debug_PWM_PERIOD);
+				printf("Expected Power Consumption: %fW\n\n", expected_power);
 				sei();
 			#endif
 		
