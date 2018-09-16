@@ -75,7 +75,8 @@ int main(void){
 		
 	/* ATMEGA328P Module Initialization */
 	// Remove double slashes to activate...
-	timer_init();	// Set up Timer and Pulse Width Modulation.
+	timer0_init();	// Set up Timer 0 and Pulse Width Modulation.
+	timer2_init();	// Set up Timer 2 and Pulse Width Modulation
 	adc_init();		// Set up ADC
 	#ifdef ADC_DEBUG_MODE_MASTER
 		stdout = &mystdout;
@@ -139,13 +140,22 @@ ISR(TIMER0_OVF_vect){
 	
 	#ifdef TIMER_DEBUG_MODE
 	// Debugger Mode...
-	PORTB ^= (1 << PB4);
-	
 	#else
 	// Normal Operation Mode...
 	OCR0A = new_PWM_frequency;			// this parameter needs a function to determine its values.
-	
 	#endif
+	
+}
+
+ISR(TIMER2_OVF_vect){
+	
+	#ifdef TIMER_DEBUG_MODE
+	// Debugger Mode...
+	#else
+	// Normal Operation Mode
+	OCR2A = new_PWM_frequency;
+	#endif
+	
 }
 
 /*** Analog to Digital Conversion Complete Interrupt ***/
@@ -217,4 +227,5 @@ ISR(ADC_vect){
 	#endif
 	
 }
-// NOTE: PWM Output Gate is PD6
+// NOTE: PWM Output Gate for Timer 0 is PD6
+// NOTE: PWM Output Gate for Timer 2 is PB3
