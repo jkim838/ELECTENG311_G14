@@ -32,8 +32,6 @@
 #ifdef ADC_DEBUG_MODE_MASTER
 	#define BAUD_RATE 9600
 	#define debug_UBRR F_CPU / 16 / BAUD_RATE -1
-	#define debug_ADC_RESOLUTION 1024
-	#define debug_ADC_REFERENCE_VOLTAGE 5
 #endif
 
 /*** Debugger Header ***/
@@ -48,11 +46,13 @@ volatile uint8_t raw_hall_voltages[2];
 volatile uint8_t data_collected = 0;
 volatile uint8_t raw_coil_voltage;
 volatile uint8_t raw_coil_current;
-#ifdef ADC_DEBUG_MODE_MASTER
+#ifdef MAIN_DEBUG_MODE
 	int usart_putchar_printf(char var, FILE *stream);
 	static FILE mystdout = FDEV_SETUP_STREAM(usart_putchar_printf, NULL, _FDEV_SETUP_WRITE);
-	uint16_t raw_ADC_output_test;
-	uint8_t debug_ADC_current_channel;
+#endif
+#ifdef ADC_DEBUG_MODE_MASTER
+	uint16_t raw_ADC_output;
+	uint8_t debug_ADC_channel;
 #endif
 
 int main(void){
@@ -95,12 +95,10 @@ int main(void){
 			#ifdef ADC_DEBUG_MODE_MASTER
 				// try analog to digital conversion on the ADC, and display its output to the PuTTy.
 				cli();
-				printf("Current ADC Channel: %d Next ADC Channel: %d\n", debug_ADC_current_channel, ADC_current_channel);
-				printf("Raw ADC Output Value: %d", raw_ADC_output_test);
- 				uint8_t decomposed_digits[3];
- 				double ADC_output_test = (double)raw_ADC_output_test * debug_ADC_REFERENCE_VOLTAGE / debug_ADC_RESOLUTION;
-				printf(" Digitized ADC Output Value: %f\n", ADC_output_test);
-// 				debug_usart_decompose(decomposed_digits, ADC_output_test);
+				printf("Current ADC Channel: %d\n", debug_ADC_channel);
+				printf("Next ADC Channel: %d\n", ADC_next_channel);
+				printf("Raw ADC Output: %d\n", raw_ADC_output);
+				printf("Digitized ADC Output: %f\n\n", debug_adc_digitize(raw_ADC_output));
 				sei();
 			#endif
 		
@@ -151,62 +149,62 @@ ISR(ADC_vect){
 	// Debugger Mode...
 	// ADC channel switch mode is disabled for the purpose of debugging the ADC.
 	// When conversion for right hall effect sensor is complete
-		if(ADC_current_channel == 0){
-			debug_ADC_current_channel = ADC_current_channel;
-			ADC_current_channel = 2;// Next conversion is coil voltage shunt.
+		if(ADC_next_channel == 0){
+			debug_ADC_channel = ADC_next_channel;
+			ADC_next_channel = 2;// Next conversion is coil voltage shunt.
 			ADMUX &= 0xf0;			// Reset to Channel 0
 			ADMUX |= 0x02;			// Set to Channel 2. (coil voltage shunt)
 		}
-		else if(ADC_current_channel == 2){
-			debug_ADC_current_channel = ADC_current_channel;
-			ADC_current_channel = 3;// Next conversion is coil current shunt
+		else if(ADC_next_channel == 2){
+			debug_ADC_channel = ADC_next_channel;
+			ADC_next_channel = 3;// Next conversion is coil current shunt
 			ADMUX &= 0xf0;			// Reset to Channel 0
 			ADMUX |= 0x03;			// Set to Channel 3. (coil current shunt)
 		}
-		else if(ADC_current_channel == 3){
-			debug_ADC_current_channel = ADC_current_channel;
-			ADC_current_channel = 5;// Next conversion is back to right hall effect sensor.
+		else if(ADC_next_channel == 3){
+			debug_ADC_channel = ADC_next_channel;
+			ADC_next_channel = 5;// Next conversion is back to right hall effect sensor.
 			ADMUX &= 0xf0;			// Reset to Channel 0.
 			ADMUX |= 0x05;			// Set to Channel 5. (right hall effect sensor)
 		}
-		else if(ADC_current_channel == 5){
-			raw_ADC_output_test = ADC;
-			debug_ADC_current_channel = ADC_current_channel;
-			ADC_current_channel = 0;// Next conversion is left hall effect sensor.
+		else if(ADC_next_channel == 5){
+			raw_ADC_output = ADC;
+			debug_ADC_channel = ADC_next_channel;
+			ADC_next_channel = 0;// Next conversion is left hall effect sensor.
 			ADMUX &= 0xf0;			// Reset to Channel 0. (left hall effect sensor)
 		}
 		ADCSRA |= (1 << ADSC);
 	#else
 		// Normal Operation Mode...
 		// When conversion for left hall effect sensor is complete...
-		if(ADC_current_channel == 0){
+		if(ADC_next_channel == 0){
 			raw_hall_voltages[1] = ADC;
 			data_collected++;		// Second data (left hall sensor) collected.
-			ADC_current_channel = 2;	// Next conversion is coil voltage shunt.
+			ADC_next_channel = 2;	// Next conversion is coil voltage shunt.
 			ADMUX &= 0xf0;			// Reset to Channel 0
 			ADMUX |= 0x02;			// Set to Channel 2. (coil voltage shunt)
 		}
 		// When conversion for coil voltage shunt is complete...
-		else if(ADC_current_channel == 2){
+		else if(ADC_next_channel == 2){
 			raw_coil_voltage = ADC;
 			data_collected++;		// Third data (shunt voltage) collected.
-			ADC_current_channel = 3;	// Next conversion is coil current shunt
+			ADC_next_channel = 3;	// Next conversion is coil current shunt
 			ADMUX &= 0xf0;			// Reset to Channel 0
 			ADMUX |= 0x03;			// Set to Channel 3. (coil current shunt)
 		}
 		// When conversion for coil current shunt is complete...
-		else if(ADC_current_channel == 3){
+		else if(ADC_next_channel == 3){
 			raw_coil_current = ADC;
 			data_collected++;		// Fourth data (shunt current) collected.
-			ADC_current_channel = 5;	// Next conversion is back to right hall effect sensor.
+			ADC_next_channel = 5;	// Next conversion is back to right hall effect sensor.
 			ADMUX &= 0xf0;			// Reset to Channel 0.
 			ADMUX |= 0x05;			// Set to Channel 5. (right hall effect sensor)
 		}
 		// When conversion for right hall effect sensor is complete
-		else if(ADC_current_channel == 5){
+		else if(ADC_next_channel == 5){
 			raw_hall_voltages[0] = ADC;
 			data_collected++;		// First data (right hall effect) collected
-			ADC_current_channel = 0;	// Next conversion is left hall effect sensor.
+			ADC_next_channel = 0;	// Next conversion is left hall effect sensor.
 			ADMUX &= 0xf0;			// Reset to Channel 0. (left hall effect sensor)
 		}
 		ADCSRA |= (1 << ADSC);

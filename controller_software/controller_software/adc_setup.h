@@ -10,8 +10,9 @@
  *
  */ 
 
-/*** Global Variables ***/
-uint8_t ADC_current_channel;
+/*** Global VariablWes ***/
+uint8_t ADC_next_channel;
 
 /*** Function Prototypes ***/
 void adc_init();
+double debug_adc_digitize(uint16_t debug_raw_output);

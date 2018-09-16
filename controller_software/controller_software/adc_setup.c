@@ -18,7 +18,8 @@
 
 
 /*** Custom Macro Definitions ***/
-#define ADC_RESOLUTION 1023			// define resolution for analog-to-digital converter.
+#define ADC_RESOLUTION 1024			// define resolution for analog-to-digital converter.
+#define ADC_REFERENCE_VOLTAGE 5		// define reference voltage for analog-to-digital converter.
 //#define ADC_ENABLE_AUTO_TRIGGER
 
 /*** Function Definitions ***/
@@ -36,7 +37,7 @@ void adc_init(){
 	ADMUX |=  (1 << MUX2);
 	ADMUX &= ~(1 << MUX1);
 	ADMUX |=  (1 << MUX0);
-	ADC_current_channel = 5;
+	ADC_next_channel = 5;
 	
 	/** ADCSRA: ADC Control and Status Register A **/
 	/* ADC Enable */
@@ -64,5 +65,12 @@ void adc_init(){
 
 	/** ADC Begin **/
 	ADCSRA |= (1 << ADSC);			// Start new conversion
+	
+}
+
+double debug_adc_digitize(uint16_t debug_raw_output){
+	
+	double digitized_ADC_output = (double) debug_raw_output * ADC_REFERENCE_VOLTAGE / ADC_RESOLUTION;
+	return digitized_ADC_output;
 	
 }
