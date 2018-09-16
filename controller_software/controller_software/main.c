@@ -163,7 +163,7 @@ ISR(ADC_vect){
 				debug_ADC_channel = ADC_next_channel;
 				ADC_next_channel = ADC_COIL_VOLTAGE_CHANNEL;// Next conversion is back to right hall effect sensor.
 				ADMUX &= 0xf0;			// Reset to Channel 0.
-				ADMUX |= 0x05;			// Set to Channel 5. (right hall effect sensor)
+				ADMUX |= 0x02;			// Set to Channel 5. (right hall effect sensor)
 			}
 		#else
 			// ADC channel switch mode is disabled for the purpose of debugging the ADC.

@@ -703,9 +703,9 @@ ISR(ADC_vect){
      502:	80 81       	ld	r24, Z
      504:	80 7f       	andi	r24, 0xF0	; 240
      506:	80 83       	st	Z, r24
-				ADMUX |= 0x05;			// Set to Channel 5. (right hall effect sensor)
+				ADMUX |= 0x02;			// Set to Channel 5. (right hall effect sensor)
      508:	80 81       	ld	r24, Z
-     50a:	85 60       	ori	r24, 0x05	; 5
+     50a:	82 60       	ori	r24, 0x02	; 2
      50c:	80 83       	st	Z, r24
 				debug_ADC_channel = ADC_next_channel;
 				ADC_next_channel = 0;// Next conversion is left hall effect sensor.
