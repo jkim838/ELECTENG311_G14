@@ -15,16 +15,9 @@
 #define ADC_RESOLUTION 1024
 #define ADC_REFERENCE_VOLTAGE 5
 //#define ADC_ENABLE_AUTO_TRIGGER					// When enabled, the ADC will be automatically triggered as Timer1 overflows
-#define DISABLE_HALL_EFFECT_SENSORS
-#ifdef DISABLE_HALL_EFFECT_SENSORS
-	#define ADC_COIL_VOLTAGE_CHANNEL 2
-	#define ADC_COIL_CURRENT_CHANNEL 3
-#else
-	#define ADC_LEFT_HALL_CHANNEL 0
-	#define ADC_RIGHT_HALL_CHANNEL 5
-	#define ADC_COIL_VOLTAGE_CHANNEL 2
-	#define ADC_COIL_CURRENT_CHANNEL 3
-#endif
+#define ADC_COIL_VOLTAGE_CHANNEL 2
+#define ADC_COIL_CURRENT_CHANNEL 3
+
 
 /** Debugger Definitions **/
 /* Main Debugger Definitions*/

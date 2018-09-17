@@ -28,19 +28,11 @@ void adc_init(){
 	ADMUX &= ~(1 << ADLAR);			// Right adjust ADC reading to ADCH
 	/* Analog Channel Selection Bits */
 	// Change input pin as specified by the data sheet...
-	#ifdef DISABLE_HALL_EFFECT_SENSORS
-		ADMUX &= ~(1 << MUX3);							// Channel 2 (Coil Voltage Sensor): Input pin is PC2
-		ADMUX &= ~(1 << MUX2);
-		ADMUX |=  (1 << MUX1);
-		ADMUX &= ~(1 << MUX0);
-		ADC_next_channel = ADC_COIL_VOLTAGE_CHANNEL;	// Note: Although it is named ADC_next_channel, in this function specifically this variable signifies initial state of the ADC Channel.
-	#else
-		ADMUX &= ~(1 << MUX3);							// Channel 5 (Right Hall Effect Sensor): Input pin is PC5
-		ADMUX |=  (1 << MUX2);
-		ADMUX &= ~(1 << MUX1);
-		ADMUX |=  (1 << MUX0);
-		ADC_next_channel = ADC_RIGHT_HALL_CHANNEL;		// Note: Although it is named ADC_next_channel, in this function specifically this variable signifies initial state of the ADC Channel.
-	#endif
+	ADMUX &= ~(1 << MUX3);							// Channel 2 (Coil Voltage Sensor): Input pin is PC2
+	ADMUX &= ~(1 << MUX2);
+	ADMUX |=  (1 << MUX1);
+	ADMUX &= ~(1 << MUX0);
+	ADC_next_channel = ADC_COIL_VOLTAGE_CHANNEL;	// Note: Although it is named ADC_next_channel, in this function specifically this variable signifies initial state of the ADC Channel.
 	
 	/** ADCSRA: ADC Control and Status Register A **/
 	/* ADC Enable */
