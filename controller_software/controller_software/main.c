@@ -3,7 +3,7 @@
  *
  * Created: 14/09/2018 8:12:55 AM
  * Author : Oliver K. jkim838 846548800
- * Revision 1.2.4
+ * Revision 1.2.7
  *
  * Description:
  * Primary program to control the operation condition of the linear compressor motor unit.
@@ -39,7 +39,7 @@ volatile uint8_t samples_counter = 0;
 volatile uint8_t raw_coil_voltage_index = 0;
 volatile uint8_t raw_coil_current_index = 0;
 volatile uint16_t raw_maximum_voltage;
-volatile uint16_t raw_minimum_voltage;  
+volatile uint16_t raw_minimum_voltage;
 
 /*** Global Variable Definitions ***/
 #ifdef TRANSMIT_DEBUG_MODE
@@ -48,7 +48,6 @@ volatile uint16_t raw_minimum_voltage;
 #endif
 
 #ifdef ADC_DEBUG_MODE
-
 	uint16_t raw_ADC_output_PC0;
 	uint16_t raw_ADC_output_PC5;
 	uint8_t debug_ADC_channel;
@@ -64,10 +63,11 @@ int main(void){
 	DDRD = 0xff;
 	
 	// Set ADC Input Gates...
-	DDRC &= ~(1 << PC0); // ADC Channel 0... left hall effect sensor
-	DDRC &= ~(1 << PC2); // ADC Channel 2... Coil Voltage Shunt
-	DDRC &= ~(1 << PC3); // ADC Channel 3... Coil Current Shunt
-	DDRC &= ~(1 << PC5); // ADC Channel 5... Right hall effect sensor
+	DDRC &= ~(1 << PC0); // ADC Channel 0... Voltage Shunt Channel
+	DDRC &= ~(1 << PC5); // ADC Channel 5... Current Shunt Channel
+	#ifdef TRANSMIT_DEBUG_MODE
+		DDRB &= ~(1 << PB7); // Debug Button
+	#endif 
 		
 	/* ATMEGA328P Module Initialization */
 	// Remove double slashes to activate...
@@ -105,7 +105,7 @@ int main(void){
 				printf("ADC0 Output (PC0): %f\nADC5 Output (PC5): %f\n", digitized_adc_output_PC0, digitized_adc_output_PC5);
 				printf("Maximum Voltage: %f\nMinimum Voltage: %f\n", maximum_voltage,minimum_voltage);
 				#ifdef CALCULATION_DEBUG_MODE
-					printf("Estimated Power Consumption: %f", expected_power);
+					printf("Estimated Power Consumption: %f\n", expected_power);
 				#endif
 				if(samples_counter == 24){
 					samples_counter = 0;
@@ -231,8 +231,7 @@ ISR(ADC_vect){
 			ADMUX &= 0xf0;			// Reset to Channel 0.
 			ADMUX |= 0x05;			// Set to Channel 5. (right hall effect sensor)
 		}
-		samples_counter++;
-		
+		samples_counter++;	
 		ADCSRA |= (1 << ADSC);
 	#endif
 	
