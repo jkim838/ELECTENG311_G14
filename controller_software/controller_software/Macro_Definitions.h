@@ -15,8 +15,8 @@
 #define ADC_RESOLUTION 1024
 #define ADC_REFERENCE_VOLTAGE 5
 //#define ADC_ENABLE_AUTO_TRIGGER					// When enabled, the ADC will be automatically triggered as Timer1 overflows
-#define ADC_COIL_VOLTAGE_CHANNEL 2
-#define ADC_COIL_CURRENT_CHANNEL 3
+#define ADC_COIL_VOLTAGE_CHANNEL 0
+#define ADC_COIL_CURRENT_CHANNEL 5
 
 
 /** Debugger Definitions **/

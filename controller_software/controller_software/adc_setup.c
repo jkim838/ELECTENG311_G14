@@ -28,9 +28,9 @@ void adc_init(){
 	ADMUX &= ~(1 << ADLAR);			// Right adjust ADC reading to ADCH
 	/* Analog Channel Selection Bits */
 	// Change input pin as specified by the data sheet...
-	ADMUX &= ~(1 << MUX3);							// Channel 2 (Coil Voltage Sensor): Input pin is PC2
+	ADMUX &= ~(1 << MUX3);							// Channel 0 (Coil Voltage Sensor): Input pin is PC0
 	ADMUX &= ~(1 << MUX2);
-	ADMUX |=  (1 << MUX1);
+	ADMUX &= ~(1 << MUX1);
 	ADMUX &= ~(1 << MUX0);
 	ADC_next_channel = ADC_COIL_VOLTAGE_CHANNEL;	// Note: Although it is named ADC_next_channel, in this function specifically this variable signifies initial state of the ADC Channel.
 	
@@ -46,8 +46,8 @@ void adc_init(){
 	ADCSRA |= (1 << ADIE);			// Interrupt 'On'
 	/* Pre-scaler Setup */
 	ADCSRA |= (1 << ADPS2);			// Pre-scaler Division factor to 64
-	ADCSRA |= (1 << ADPS1);			// ADC Frequency = 250 KHz @Xplained Mini (F_CPU 16MHz)
-	ADCSRA &=~(1 << ADPS0);			// ADC Frequency = 125 KHz @PCB (F_CPU 8MHz)
+	ADCSRA |= (1 << ADPS1);			// ADC Frequency = 125 KHz @Xplained Mini (F_CPU 16MHz)
+	ADCSRA |= (1 << ADPS0);			// ADC Frequency = 62.5 KHz @PCB (F_CPU 8MHz)
 	
 	/** ADCSRB: ADC Control and Status Register B **/
 	/* ADC Auto Trigger Source */

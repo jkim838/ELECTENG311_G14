@@ -30,9 +30,6 @@
 #endif
 
 /*** ISR Variable Definitions ***/
-#ifdef DISABLE_HALL_EFFECT_SENSORS
-	volatile uint16_t raw_hall_voltages[2];
-#endif
 volatile uint8_t data_collected = 0;
 volatile uint16_t raw_coil_voltage;
 volatile uint16_t raw_coil_current;
@@ -52,8 +49,8 @@ volatile uint16_t raw_minimum_voltage;
 
 #ifdef ADC_DEBUG_MODE
 
-	uint16_t raw_ADC_output_PC2;
-	uint16_t raw_ADC_output_PC3;
+	uint16_t raw_ADC_output_PC0;
+	uint16_t raw_ADC_output_PC5;
 	uint8_t debug_ADC_channel;
 #endif
 
@@ -98,14 +95,14 @@ int main(void){
 			#ifdef ADC_DEBUG_MODE
 				cli();
 				// try analog to digital conversion on the ADC, and display its output to the PuTTy.
-				double digitized_adc_output_PC2 = debug_adc_digitize(raw_ADC_output_PC2);
-				double digitized_adc_output_PC3 = debug_adc_digitize(raw_ADC_output_PC3);
+				double digitized_adc_output_PC0 = debug_adc_digitize(raw_ADC_output_PC0);
+				double digitized_adc_output_PC5 = debug_adc_digitize(raw_ADC_output_PC5);
 				double maximum_voltage = debug_adc_digitize(raw_maximum_voltage);
 				double minimum_voltage = debug_adc_digitize(raw_minimum_voltage);
-				double expected_power = calculate_power(digitized_adc_output_PC2, debug_COIL_CURRENT, debug_PWM_LIVE_TIME, debug_PWM_PERIOD);
+				double expected_power = calculate_power(digitized_adc_output_PC0, debug_COIL_CURRENT, debug_PWM_LIVE_TIME, debug_PWM_PERIOD);
 				printf("Current Channel: %d\n", debug_ADC_channel);
 				printf("Next Channel: %d\n", ADC_next_channel);
-				printf("ADC2 Output (PC2): %f\nADC3 Output (PC3): %f\n", digitized_adc_output_PC2, digitized_adc_output_PC3);
+				printf("ADC0 Output (PC0): %f\nADC5 Output (PC5): %f\n", digitized_adc_output_PC0, digitized_adc_output_PC5);
 				printf("Maximum Voltage: %f\nMinimum Voltage: %f\n", maximum_voltage,minimum_voltage);
 				#ifdef CALCULATION_DEBUG_MODE
 					printf("Estimated Power Consumption: %f", expected_power);
@@ -121,16 +118,7 @@ int main(void){
 		
 		#else
 		// normal operation mode
-		if(data_collected == 4){
-			cli();
-			data_collected = 0; //reset data collection count
-			double stroke_length = calculate_length(raw_hall_voltages);
-			double stroke_period = calculate_period(raw_hall_voltages);
-			double stroke_frequency = 1/stroke_period;
-			double power = calculate_power(raw_coil_voltage, raw_coil_current, parameter1, stroke_period);
-			double flow_rate = calculate_flow_rate(parameter1, parameter2);
-			sei();
-		}
+
 		#endif
 		
 		#ifdef XPLAINED_MINI_LED_STROBE
@@ -190,22 +178,22 @@ ISR(ADC_vect){
 				raw_minimum_voltage = ADC;
 			}
 			raw_coil_voltage_index++;
-			raw_ADC_output_PC2 = ADC;
+			raw_ADC_output_PC0 = ADC;
 			debug_ADC_channel = ADC_next_channel;
 			ADC_next_channel = ADC_COIL_CURRENT_CHANNEL;	// Next conversion is coil current shunt
 			ADMUX &= 0xf0;									// Reset to Channel 0
-			ADMUX |= 0x03;									// Set to Channel 3. (coil current shunt)
+			ADMUX |= 0x05;									// Set to Channel 3. (coil current shunt)
 		}
 		else if(ADC_next_channel == ADC_COIL_CURRENT_CHANNEL){
 			if(raw_coil_current_index < 24){
 				raw_coil_currents[raw_coil_current_index] = ADC;
 			}
 			raw_coil_current_index++;
-			raw_ADC_output_PC3 = ADC;
+			raw_ADC_output_PC5 = ADC;
 			debug_ADC_channel = ADC_next_channel;
 			ADC_next_channel = ADC_COIL_VOLTAGE_CHANNEL;	// Next conversion is back to coil voltage sensor
 			ADMUX &= 0xf0;									// Reset to Channel 0.
-			ADMUX |= 0x02;									// Set to Channel 5. (right hall effect sensor)
+			ADMUX |= 0x00;									// Set to Channel 5. (right hall effect sensor)
 		}
 		samples_counter++;
 		ADCSRA |= (1 << ADSC);
@@ -228,20 +216,20 @@ ISR(ADC_vect){
 				raw_minimum_voltage = ADC;
 			}
 			raw_coil_voltage_index++;
-			raw_ADC_output_PC2 = ADC;
+			raw_ADC_output_PC0 = ADC;
 			ADC_next_channel = ADC_COIL_CURRENT_CHANNEL;// Next conversion is coil current shunt
 			ADMUX &= 0xf0;			// Reset to Channel 0
-			ADMUX |= 0x03;			// Set to Channel 3. (coil current shunt)
+			ADMUX |= 0x00;			// Set to Channel 3. (coil current shunt)
 		}
 		else if(ADC_next_channel == ADC_COIL_CURRENT_CHANNEL){
 			if(raw_coil_current_index < 24){
 				raw_coil_currents[raw_coil_current_index] = ADC;
 			}
 			raw_coil_current_index++;
-			raw_ADC_output_PC3 = ADC;
+			raw_ADC_output_PC5 = ADC;
 			ADC_next_channel = ADC_COIL_VOLTAGE_CHANNEL;// Next conversion is back to right hall effect sensor.
 			ADMUX &= 0xf0;			// Reset to Channel 0.
-			ADMUX |= 0x02;			// Set to Channel 5. (right hall effect sensor)
+			ADMUX |= 0x05;			// Set to Channel 5. (right hall effect sensor)
 		}
 		samples_counter++;
 		
