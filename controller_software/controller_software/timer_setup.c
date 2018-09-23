@@ -24,7 +24,8 @@
 void timer0_init(){
 	
 	/*** OCR0A: Output Compare Register A ***/
-	OCR0A = 128;
+	PWM1_DC_control = 32;
+	OCR0A = PWM1_DC_control;
 
 	/*** TCCR0A: Timer/Counter Control Register A ***/
 	/*** Compare Match Output A Mode ***/
@@ -64,11 +65,11 @@ void timer0_init(){
 void timer2_init(){
 	
 	/*** OCR2A: Output Compare Register A ***/
-	OCR2A = 128;
+	OCR2A = TIMER_MAX - PWM1_DC_control;
 
 	/*** TCCR2A: Timer/Counter Control Register A ***/
 	/*** Compare Match Output A Mode ***/
-	TCCR2A |=  (1 << COM2A1);		// Clear Output Compare Pin (OC2A) on Compare Match (non-inverting), Set OC2A at BOTTOM.
+	TCCR2A |=  (1 << COM2A1);		// Set Output Compare Pin (OC2A) on Compare Match (inverting), Clear OC2A at BOTTOM.
 	TCCR2A |=  (1 << COM2A0);
 	
 	/*** Waveform Generation Mode ***/

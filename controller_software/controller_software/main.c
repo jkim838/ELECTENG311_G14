@@ -193,7 +193,7 @@ ISR(TIMER2_OVF_vect){
 	// Debugger Mode...			
 	#else
 	// Normal Operation Mode
-	OCR2A = new_PWM_frequency;
+	OCR2A = TIMER_MAX - new_PWM_frequency;
 	#endif
 	
 }

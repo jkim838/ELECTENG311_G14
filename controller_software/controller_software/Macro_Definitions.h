@@ -11,6 +11,9 @@
 /*** Custom Macro Definitions ***/
 /** Main Routine Definitions **/
 #define F_CPU 16000000UL
+/** Timer Routine Definitions **/
+#define TIMER_MAX 255
+#define TIMER_LOW 0
 /** ADC Routine Definitions **/
 #define ADC_RESOLUTION 1024
 #define ADC_REFERENCE_VOLTAGE 5
