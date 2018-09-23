@@ -17,16 +17,17 @@
 //#define ADC_ENABLE_AUTO_TRIGGER					// When enabled, the ADC will be automatically triggered as Timer1 overflows
 #define ADC_COIL_VOLTAGE_CHANNEL 0
 #define ADC_COIL_CURRENT_CHANNEL 5
-
+/** Communication Routine Definitions **/
+#define BAUD_RATE 9600
+#define UBRR_VALUE F_CPU/16/BAUD_RATE - 1
+#define DATA_REG_IS_FULL !((1 << UDRE0) & UCSR0A)
+#define ASCII_CONVERT 48
 
 /** Debugger Definitions **/
 /* Main Debugger Definitions*/
-#define TRANSMIT_DEBUG_MODE								// Enables displaying variable value by printf function. Output will be transmitted to PuTTy.
-#ifdef TRANSMIT_DEBUG_MODE								// Warning: Ensure this macro is defined to use any of the sub-level debugger mode (e.g. ADC Debugger)
-	#define BAUD_RATE 9600								// otherwise the debugging feature will not function correctly.
+#define TRANSMIT_DEBUG_MODE							// Enables displaying variable value by printf function. Output will be transmitted to PuTTy.
+#ifdef TRANSMIT_DEBUG_MODE								// Warning: Ensure this macro is defined to use any of the sub-level debugger mode (e.g. ADC Debugger)	// otherwise the debugging feature will not function correctly.
 	#define debug_UBRR F_CPU / 16 / BAUD_RATE -1
-	#define DATA_REG_IS_FULL !((1 << UDRE0) & UCSR0A)
-	#define ASCII_CONVERT 48							// Convert to ASCII Characters
 	#define PB_SW_IS_LOW ~PIND & (1 << PB7)				// Xplained Mini On-board Switch
 #endif
 #define ENABLE_DEBUGGING_PARAMETER						// Enables placeholder parameters

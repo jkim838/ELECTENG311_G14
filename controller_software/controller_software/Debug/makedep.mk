@@ -6,6 +6,8 @@ adc_setup.c
 
 calculations.c
 
+Comm_Setup.c
+
 debug_usart.c
 
 main.c

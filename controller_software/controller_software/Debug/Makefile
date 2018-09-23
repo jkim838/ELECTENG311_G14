@@ -39,6 +39,7 @@ SUBDIRS :=
 C_SRCS +=  \
 ../adc_setup.c \
 ../calculations.c \
+../Comm_Setup.c \
 ../debug_usart.c \
 ../main.c \
 ../timer_setup.c
@@ -53,6 +54,7 @@ ASM_SRCS +=
 OBJS +=  \
 adc_setup.o \
 calculations.o \
+Comm_Setup.o \
 debug_usart.o \
 main.o \
 timer_setup.o
@@ -60,6 +62,7 @@ timer_setup.o
 OBJS_AS_ARGS +=  \
 adc_setup.o \
 calculations.o \
+Comm_Setup.o \
 debug_usart.o \
 main.o \
 timer_setup.o
@@ -67,6 +70,7 @@ timer_setup.o
 C_DEPS +=  \
 adc_setup.d \
 calculations.d \
+Comm_Setup.d \
 debug_usart.d \
 main.d \
 timer_setup.d
@@ -74,6 +78,7 @@ timer_setup.d
 C_DEPS_AS_ARGS +=  \
 adc_setup.d \
 calculations.d \
+Comm_Setup.d \
 debug_usart.d \
 main.d \
 timer_setup.d
@@ -92,6 +97,8 @@ LINKER_SCRIPT_DEP+=
 
 
 # AVR32/GNU C Compiler
+
+
 
 
 

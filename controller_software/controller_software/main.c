@@ -3,7 +3,7 @@
  *
  * Created: 14/09/2018 8:12:55 AM
  * Author : Oliver K. jkim838 846548800
- * Revision 1.2.7
+ * Revision 1.3.0
  *
  * Description:
  * Primary program to control the operation condition of the linear compressor motor unit.
@@ -15,19 +15,19 @@
 #include <avr/interrupt.h>
 #include <stdint.h>
 #include <stdio.h>
-
+#include <stdbool.h>
 /*** Custom Header Files ***/
 #include "timer_setup.h"		// Contains functions used to configure timer
 #include "adc_setup.h"			// Contains functions used to configure ADC
 #include "calculations.h"		// Contains functions to calculate parameters
 #include "Macro_Definitions.h"  // Contains all necessary Macro definitions
-
 /*** Debugger Header ***/
 #ifdef TRANSMIT_DEBUG_MODE
-	#include <util/delay.h>
 	#include "debug_usart.h"		// Contains functions to transmit variable values with USART Transmission
-	#include <stdbool.h>
+#else
+	#include "Comm_Setup.h"			// Contains functions to communicate between Master/Slave System.	
 #endif
+#include <util/delay.h>
 
 /*** ISR Variable Definitions ***/
 volatile uint8_t data_collected = 0;
@@ -40,7 +40,13 @@ volatile uint8_t raw_coil_voltage_index = 0;
 volatile uint8_t raw_coil_current_index = 0;
 volatile uint16_t raw_maximum_voltage;
 volatile uint16_t raw_minimum_voltage;
-
+volatile uint8_t debug_ADC_channel;
+#ifdef TRANSMIT_DEBUG_MODE
+#else
+	volatile uint8_t usart_RX_index = 0;
+	volatile unsigned char usart_RX[27]; // The maximum assumed size of Rx buffer.
+	volatile bool RX_sequence_complete = false;
+#endif
 /*** Global Variable Definitions ***/
 #ifdef TRANSMIT_DEBUG_MODE
 	int usart_putchar_printf(char var, FILE *stream);
@@ -50,7 +56,6 @@ volatile uint16_t raw_minimum_voltage;
 #ifdef ADC_DEBUG_MODE
 	uint16_t raw_ADC_output_PC0;
 	uint16_t raw_ADC_output_PC5;
-	uint8_t debug_ADC_channel;
 #endif
 
 int main(void){
@@ -78,6 +83,8 @@ int main(void){
 		stdout = &mystdout;
 		// enable USART for transmitting digital conversion result to PuTTy...
 		debug_usart_init(debug_UBRR);
+	#else
+		usart_init(UBRR_VALUE);
 	#endif
 	
 	sei();
@@ -118,12 +125,25 @@ int main(void){
 		
 		#else
 		// normal operation mode
-
+		// only read from the buffer when RX is complete...
+			if(RX_sequence_complete == true){
+				cli();
+				// read from the buffer...
+				uint8_t digit_req[3];
+				usart_obtain_req(digit_req, usart_RX);
+				uint8_t numerical_req = numerify_req(digit_req);
+				// update OCR0 value for the next cycle...
+				
+				// prepare report... (calculation etc...)
+				// transmit report...
+				RX_sequence_complete = false;
+				sei();
+			}
+			
 		#endif
 		
 		#ifdef XPLAINED_MINI_LED_STROBE
 			PORTB ^= (1 << PB5);
-			_delay_ms(100);
 		#endif
 		
 
@@ -134,7 +154,28 @@ int main(void){
 	return 0;
 }
 
+
+
 /*** Interrupt Service Routine Definitions ***/
+#ifdef TRANSMIT_DEBUG_MODE
+#else
+	ISR(USART_RX_vect){
+		// Reception is complete... Need to find a way to extract information.
+		if(usart_RX_index < 28){
+			usart_RX[usart_RX_index] = UDR0;
+		}
+		else if (usart_RX_index >= 28){
+			// If Index exceeds over 28, which is larger than estimated maximum length of the RX...
+			// Reset the Index back to zero (hence allow new sequence of RX)...
+			usart_RX_index = 0
+			// Record the first bit of the RX to the buffer...
+			usart_RX[usart_RX_index] = UDR0;
+			RX_sequence_complete = true;
+		}
+		usart_RX_index++;
+	}
+#endif
+
 ISR(TIMER0_OVF_vect){
 	
 	#ifdef TIMER_DEBUG_MODE
@@ -149,7 +190,7 @@ ISR(TIMER0_OVF_vect){
 ISR(TIMER2_OVF_vect){
 	
 	#ifdef TIMER_DEBUG_MODE
-	// Debugger Mode...
+	// Debugger Mode...			
 	#else
 	// Normal Operation Mode
 	OCR2A = new_PWM_frequency;

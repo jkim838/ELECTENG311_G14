@@ -76,3 +76,9 @@ double calculate_power(double coil_voltage, double coil_current, double PWM_live
 	return average_power;
 	
 }
+
+uint8_t numerify_req(uint8_t (*digit_req)[3]){
+	uint8_t numerical_req;
+	numerical_req = *digit_req[2] * 100 + *digit_req[1] * 10 + *digit_req[0];
+	return numerical_req;	
+}

@@ -160,6 +160,12 @@
     <Compile Include="calculations.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="Comm_Setup.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="Comm_Setup.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="debug_usart.c">
       <SubType>compile</SubType>
     </Compile>

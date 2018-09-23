@@ -4,7 +4,7 @@
  * Created: 14/09/2018 8:53:20 AM
  * Author: Oliver K jkim838 846548800
  *
- * Revision 1.1.5
+ * Revision 1.3.0
  *
  * This script file contains definitions for functions related to Timer and PWM.
  *
@@ -24,7 +24,7 @@
 void timer0_init(){
 	
 	/*** OCR0A: Output Compare Register A ***/
-	OCR0A = 64;
+	OCR0A = 128;
 
 	/*** TCCR0A: Timer/Counter Control Register A ***/
 	/*** Compare Match Output A Mode ***/
@@ -45,7 +45,7 @@ void timer0_init(){
 	
 	/*** Clock Select Bits ***/
 	// NOTES: CHANGE PRESCALER VALUE IF WE WANT TO PRODUCE SMALLER COUNT
-	TCCR0B |= (1 << CS02);			// Pre-scaler 256
+	TCCR0B |=  (1 << CS02);			// Pre-scaler 256
 	TCCR0B &= ~(1 << CS01);			// Timer Frequency = 62.5 KHz @Xplained Mini (F_CPU = 16MHz)
 	TCCR0B &= ~(1 << CS00);			// Timer Frequency = 31.25 KHz @PCB (F_CPU = 8MHz)
 	
@@ -64,12 +64,12 @@ void timer0_init(){
 void timer2_init(){
 	
 	/*** OCR2A: Output Compare Register A ***/
-	OCR2A = 64;
+	OCR2A = 128;
 
 	/*** TCCR2A: Timer/Counter Control Register A ***/
 	/*** Compare Match Output A Mode ***/
-	TCCR2A |=   (1 << COM2A1);		// Clear Output Compare Pin (OC2A) on Compare Match (non-inverting), Set OC2A at BOTTOM.
-	TCCR2A &=  ~(1 << COM2A0);
+	TCCR2A |=  (1 << COM2A1);		// Clear Output Compare Pin (OC2A) on Compare Match (non-inverting), Set OC2A at BOTTOM.
+	TCCR2A |=  (1 << COM2A0);
 	
 	/*** Waveform Generation Mode ***/
 	TCCR2A |=  (1<< WGM22);			// Fast PWM Mode TOP = 0xff, Update OCR0A at BOTTOM, TOV at 0xff
@@ -78,9 +78,9 @@ void timer2_init(){
 	
 	/*** Clock Select Bits ***/
 	// NOTES: CHANGE PRESCALER VALUE IF WE WANT TO PRODUCE SMALLER COUNT
-	TCCR2B |=  (1 << CS22);			// Pre-scaler 256
-	TCCR2B |=  (1 << CS21);			// Timer Frequency = 62.5 KHz @Xplained Mini (F_CPU = 16MHz)
-	TCCR2B &= ~(1 << CS20);			// Timer Frequency = 31.25 KHz @PCB (F_CPU = 8MHz)
+	TCCR2B |=  (1 << CS22);
+	TCCR2B |=  (1 << CS21);
+	TCCR2B &= ~(1 << CS20);
 	
 	// A match between OCR0A and TCNT0 will call interrupt, or generate waveform output on OC0A pin
 	
