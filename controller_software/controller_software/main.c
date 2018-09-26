@@ -41,6 +41,8 @@ volatile uint8_t raw_coil_current_index = 0;
 volatile uint16_t raw_maximum_voltage;
 volatile uint16_t raw_minimum_voltage;
 volatile uint8_t debug_ADC_channel;
+volatile uint8_t MATCH_COUNTER_T0 = 0;
+volatile uint8_t MATCH_COUNTER_T2 = 0;
 #ifdef TRANSMIT_DEBUG_MODE
 #else
 	volatile uint8_t usart_RX_index = 0;
@@ -88,7 +90,7 @@ int main(void){
 	#endif
 	
 	sei();
-	
+
     /* Main Loop */
     while (1) {
 		
@@ -107,19 +109,19 @@ int main(void){
 				double maximum_voltage = debug_adc_digitize(raw_maximum_voltage);
 				double minimum_voltage = debug_adc_digitize(raw_minimum_voltage);
 				double expected_power = calculate_power(digitized_adc_output_PC0, debug_COIL_CURRENT, debug_PWM_LIVE_TIME, debug_PWM_PERIOD);
-				printf("Current Channel: %d\n", debug_ADC_channel);
-				printf("Next Channel: %d\n", ADC_next_channel);
-				printf("ADC0 Output (PC0): %f\nADC5 Output (PC5): %f\n", digitized_adc_output_PC0, digitized_adc_output_PC5);
-				printf("Maximum Voltage: %f\nMinimum Voltage: %f\n", maximum_voltage,minimum_voltage);
-				#ifdef CALCULATION_DEBUG_MODE
-					printf("Estimated Power Consumption: %f\n", expected_power);
-				#endif
+// 				printf("Current Channel: %d\n", debug_ADC_channel);
+// 				printf("Next Channel: %d\n", ADC_next_channel);
+// 				printf("ADC0 Output (PC0): %f\nADC5 Output (PC5): %f\n", digitized_adc_output_PC0, digitized_adc_output_PC5);
+// 				printf("Maximum Voltage: %f\nMinimum Voltage: %f\n", maximum_voltage,minimum_voltage);
+// 				#ifdef CALCULATION_DEBUG_MODE
+// 					printf("Estimated Power Consumption: %f\n", expected_power);
+// 				#endif
 				if(samples_counter == 24){
 					samples_counter = 0;
 					raw_coil_voltage_index = 0;
 					raw_coil_current_index = 0;
 				}
-				printf("\n");
+//				printf("\n");
 				sei();
 			#endif
 		
@@ -144,6 +146,7 @@ int main(void){
 		
 		#ifdef XPLAINED_MINI_LED_STROBE
 			PORTB ^= (1 << PB5);
+			_delay_ms(100);
 		#endif
 		
 
@@ -176,28 +179,41 @@ int main(void){
 	}
 #endif
 
-ISR(TIMER0_OVF_vect){
-	
-	#ifdef TIMER_DEBUG_MODE
-	// Debugger Mode...
-	#else
-	// Normal Operation Mode...
-	OCR0A = new_PWM_frequency;			// this parameter needs a function to determine its values.
-	#endif
+
+ISR(TIMER0_COMPA_vect){
+	if(MATCH_COUNTER_T0 == 0){
+		PORTD |= (1 << PD6);
+	}
+	else if(MATCH_COUNTER_T0 == 20){	// Period of the signal
+		PORTD |= (1 << PD6);
+		MATCH_COUNTER_T0 = 0;
+	}
+}
+
+ISR(TIMER0_COMPB_vect){
+	if(MATCH_COUNTER_T0 == 6){		// Kill output when 6ms
+		PORTD &= ~(1 << PD6);
+	}
+	MATCH_COUNTER_T0++;
+}
+
+ISR(TIMER2_COMPA_vect){
+	if(MATCH_COUNTER_T2 == 40){
+		PORTB |= (1 << PB3);
+	}
+	else if(MATCH_COUNTER_T2 == 80){
+		PORTB |= (1 << PB3);
+		MATCH_COUNTER_T2 = 40;
+	}
 	
 }
 
-ISR(TIMER2_OVF_vect){
-	
-	#ifdef TIMER_DEBUG_MODE
-	// Debugger Mode...			
-	#else
-	// Normal Operation Mode
-	OCR2A = TIMER_MAX - new_PWM_frequency;
-	#endif
-	
+ISR(TIMER2_COMPB_vect){
+	if(MATCH_COUNTER_T2 == 46){
+		PORTB &= ~(1 << PB3);
+	}
+	MATCH_COUNTER_T2++;
 }
-
 /*** Analog to Digital Conversion Complete Interrupt ***/
 ISR(ADC_vect){
 	
