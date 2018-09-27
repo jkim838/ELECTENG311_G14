@@ -28,7 +28,7 @@
 
 /** Debugger Definitions **/
 /* Main Debugger Definitions*/
-#define TRANSMIT_DEBUG_MODE							// Enables displaying variable value by printf function. Output will be transmitted to PuTTy.
+#define TRANSMIT_DEBUG_MODE								// Enables displaying variable value by printf function. Output will be transmitted to PuTTy.
 #ifdef TRANSMIT_DEBUG_MODE								// Warning: Ensure this macro is defined to use any of the sub-level debugger mode (e.g. ADC Debugger)	// otherwise the debugging feature will not function correctly.
 	#define debug_UBRR F_CPU / 16 / BAUD_RATE -1
 	#define PB_SW_IS_LOW ~PIND & (1 << PB7)				// Xplained Mini On-board Switch
@@ -44,6 +44,7 @@
 	#define debug_PWM_PERIOD 0.02	// Period of the PWM. Not the period of the Motor
 	#define debug_COIL_CURRENT 0.5	// Be mindful that this is a voltage level across the Current Shunt Resistor
 #endif
+#define ENABLE_PRINTF
 /* Calculation Debugger Definitions */
 #define CALCULATION_DEBUG_MODE
 #ifdef CALCULATION_DEBUG_MODE

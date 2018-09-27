@@ -78,8 +78,8 @@ int main(void){
 		
 	/* ATMEGA328P Module Initialization */
 	// Remove double slashes to activate...
-	timer0_init();	// Set up Timer 0 and Pulse Width Modulation.
-	timer2_init();	// Set up Timer 2 and Pulse Width Modulation
+	timer0_init();	// Set up Timer 0 for Pulse Modulation
+	timer2_init();	// Set up Timer 2 and Pulse Modulation
 	adc_init();		// Set up ADC
 	#ifdef TRANSMIT_DEBUG_MODE
 		stdout = &mystdout;
@@ -109,19 +109,23 @@ int main(void){
 				double maximum_voltage = debug_adc_digitize(raw_maximum_voltage);
 				double minimum_voltage = debug_adc_digitize(raw_minimum_voltage);
 				double expected_power = calculate_power(digitized_adc_output_PC0, debug_COIL_CURRENT, debug_PWM_LIVE_TIME, debug_PWM_PERIOD);
-// 				printf("Current Channel: %d\n", debug_ADC_channel);
-// 				printf("Next Channel: %d\n", ADC_next_channel);
-// 				printf("ADC0 Output (PC0): %f\nADC5 Output (PC5): %f\n", digitized_adc_output_PC0, digitized_adc_output_PC5);
-// 				printf("Maximum Voltage: %f\nMinimum Voltage: %f\n", maximum_voltage,minimum_voltage);
-// 				#ifdef CALCULATION_DEBUG_MODE
-// 					printf("Estimated Power Consumption: %f\n", expected_power);
-// 				#endif
+				#ifdef ENABLE_PRINTF
+					printf("Current Channel: %d\n", debug_ADC_channel);
+					printf("Next Channel: %d\n", ADC_next_channel);
+					printf("ADC0 Output (PC0): %f\nADC5 Output (PC5): %f\n", digitized_adc_output_PC0, digitized_adc_output_PC5);
+					printf("Maximum Voltage: %f\nMinimum Voltage: %f\n", maximum_voltage,minimum_voltage);
+					#ifdef CALCULATION_DEBUG_MODE
+						printf("Estimated Power Consumption: %f\n", expected_power);
+					#endif
+				#endif
 				if(samples_counter == 24){
 					samples_counter = 0;
 					raw_coil_voltage_index = 0;
 					raw_coil_current_index = 0;
 				}
-//				printf("\n");
+				#ifdef ENABLE_PRINTF
+					printf("\n");
+				#endif
 				sei();
 			#endif
 		
@@ -157,8 +161,6 @@ int main(void){
 	return 0;
 }
 
-
-
 /*** Interrupt Service Routine Definitions ***/
 #ifdef TRANSMIT_DEBUG_MODE
 #else
@@ -179,41 +181,66 @@ int main(void){
 	}
 #endif
 
-
-ISR(TIMER0_COMPA_vect){
-	if(MATCH_COUNTER_T0 == 0){
-		PORTD |= (1 << PD6);
-	}
-	else if(MATCH_COUNTER_T0 == 20){	// Period of the signal
-		PORTD |= (1 << PD6);
-		MATCH_COUNTER_T0 = 0;
-	}
-}
-
-ISR(TIMER0_COMPB_vect){
-	if(MATCH_COUNTER_T0 == 6){		// Kill output when 6ms
-		PORTD &= ~(1 << PD6);
-	}
-	MATCH_COUNTER_T0++;
-}
-
-ISR(TIMER2_COMPA_vect){
-	if(MATCH_COUNTER_T2 == 40){
-		PORTB |= (1 << PB3);
-	}
-	else if(MATCH_COUNTER_T2 == 80){
-		PORTB |= (1 << PB3);
-		MATCH_COUNTER_T2 = 40;
-	}
+#ifdef ENABLE_PRINTF
+	// Pulse Output is disabled due to unexpected behavior caused by long delays between global interrupt disabled and enabled.
+#else
+	/*** Pulse Modulation Unit Description ***/
+	/*Two 8-bit TIMER/COUNTER on Atmega328p micro controller is currently set to produce Compare Match Flag each time TCNTn register
+	value is equal to Output Compare Register A (OCR0A, OCR2A) and Output Compare Register B (OCR0B, OCR2B), at approximately 1 millisecond
+	(1 ms) on 16 MHz main clock speed.
 	
-}
-
-ISR(TIMER2_COMPB_vect){
-	if(MATCH_COUNTER_T2 == 46){
-		PORTB &= ~(1 << PB3);
+	The duration between each Compare Match Flag A and Compare Match Flag B is adjustable by changing the value of Output Compare Register B
+	of the timers. For example, On a slower system, operating at lower clock frequency (e.g. PCB Mounted ATMEGA 328P @ 8 MHz), the same 1 ms 
+	period can be produced by reducing the OCR0B and OCR2B values by half.
+	
+	a. At every compare Match Flag A, the designated output pin will produce 5V (HIGH).
+	b. At every Compare Match Flag B, the match counter variable (MATCH_COUNTER_T0 for TIMER0, MATCH_COUNTER_T2 for TIMER2) is incremented, indicating 
+	   how many milliseconds has passed since the pin was activated.
+	c. The live time of the output is controlled by comparing the counter variable to a desired output duration: for example, six match counter is 
+	   required to produce 6 milliseconds of live-time. 
+	d. The total period (Live-time + Dead-time) between each TIMER output is controlled by comparing the counter variable to a desired period: for
+	   example, 
+	   
+	/***WARNING***/
+	/* The following conditions are critical to correct operation of the system.
+	a. To ensure correct pulse output, both TIMER0 and TIMER2 operation must be synchronized upon initialization.
+	b. When macro ENABLE_PRINTF is defined, Pulse Modulation will behave unexpectedly due to long delay between global interrupt disable and global 
+	   interrupt enable caused by printf function. To ensure correct functionality of the Pulse Modulation, Macro ENABLE_PRINTF must first be undefined. */
+	ISR(TIMER0_COMPA_vect){
+		if(MATCH_COUNTER_T0 == 0){
+			PORTD |= (1 << PD6);
+		}
+		else if(MATCH_COUNTER_T0 == 20){	// Period of the signal
+			PORTD |= (1 << PD6);
+			MATCH_COUNTER_T0 = 0;
+		}
 	}
-	MATCH_COUNTER_T2++;
-}
+
+	ISR(TIMER0_COMPB_vect){
+		if(MATCH_COUNTER_T0 == 6){		// Kill output when 6ms
+			PORTD &= ~(1 << PD6);
+		}
+		MATCH_COUNTER_T0++;
+	}
+
+	ISR(TIMER2_COMPA_vect){
+		if(MATCH_COUNTER_T2 == 40){
+			PORTB |= (1 << PB3);
+		}
+		else if(MATCH_COUNTER_T2 == 80){
+			PORTB |= (1 << PB3);
+			MATCH_COUNTER_T2 = 40;
+		}
+	
+	}
+
+	ISR(TIMER2_COMPB_vect){
+		if(MATCH_COUNTER_T2 == 46){
+			PORTB &= ~(1 << PB3);
+		}
+		MATCH_COUNTER_T2++;
+	}
+#endif
 /*** Analog to Digital Conversion Complete Interrupt ***/
 ISR(ADC_vect){
 	
