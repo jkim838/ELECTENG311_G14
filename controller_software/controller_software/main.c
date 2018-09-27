@@ -30,7 +30,8 @@
 #include <util/delay.h>
 
 /*** ISR Variable Definitions ***/
-volatile uint8_t data_collected = 0;
+
+/** Analog-Digital Converter ISR **/
 volatile uint16_t raw_coil_voltage;
 volatile uint16_t raw_coil_current;
 volatile uint16_t raw_coil_voltages[24];
@@ -41,14 +42,24 @@ volatile uint8_t raw_coil_current_index = 0;
 volatile uint16_t raw_maximum_voltage;
 volatile uint16_t raw_minimum_voltage;
 volatile uint8_t debug_ADC_channel;
+
+/** Timer/Pulse Modulation ISR **/
 volatile uint8_t MATCH_COUNTER_T0 = 0;
 volatile uint8_t MATCH_COUNTER_T2 = 0;
+volatile uint8_t PULSE_0_START_TIME = 0;
+volatile uint8_t PULSE_0_REACTIVATE_TIME = 20;
+volatile uint8_t PULSE_2_START_TIME = 40;
+volatile uint8_t PULSE_2_REACTIVATE_TIME = 86;	//update these variables so that PULSE 2 OFFSET can be automatically calculated.
+volatile uint8_t PULSE_KILL_TIME = 6;
+
+/** Master Debug Routine ISR **/
 #ifdef TRANSMIT_DEBUG_MODE
 #else
 	volatile uint8_t usart_RX_index = 0;
 	volatile unsigned char usart_RX[27]; // The maximum assumed size of Rx buffer.
 	volatile bool RX_sequence_complete = false;
 #endif
+
 /*** Global Variable Definitions ***/
 #ifdef TRANSMIT_DEBUG_MODE
 	int usart_putchar_printf(char var, FILE *stream);
@@ -138,7 +149,6 @@ int main(void){
 				uint8_t digit_req[3];
 				usart_obtain_req(digit_req, usart_RX);
 				uint8_t numerical_req = numerify_req(digit_req);
-				// update OCR0 value for the next cycle...
 				
 				// prepare report... (calculation etc...)
 				// transmit report...
@@ -163,7 +173,20 @@ int main(void){
 
 /*** Interrupt Service Routine Definitions ***/
 #ifdef TRANSMIT_DEBUG_MODE
+	// Do not setup communication program when in debugging mode.
 #else
+
+	/*** USART Receive Complete Description ***/
+	/* USART on ATMEGA328P microcontroller is currently set to transmit and receive 8-bit ASCII characters across Master (PC or equivalent system) and Slave 
+	(Linear Motor Controller) in JSON structure at a baud-rate of 9600.
+	
+	The input length to slave system is consistent in length of minimum 25 characters (in ASCII) and maximum 27 characters. When slave successfully receive 8-bit
+	transmission from the master, USART Receive Complete flag is set.
+	
+	a. The received data (an ASCII character) is stored in an unsigned character buffer (usartRX).
+	b. The index counter for the buffer is incremented for the upcoming data.
+	c. On the 28th count (i.e. one sequence of master-slave communication is complete), reset the index position to overwrite the first character of the buffer.
+	 */
 	ISR(USART_RX_vect){
 		// Reception is complete... Need to find a way to extract information.
 		if(usart_RX_index < 28){
@@ -179,13 +202,16 @@ int main(void){
 		}
 		usart_RX_index++;
 	}
+	
 #endif
 
 #ifdef ENABLE_PRINTF
 	// Pulse Output is disabled due to unexpected behavior caused by long delays between global interrupt disabled and enabled.
+	
 #else
+
 	/*** Pulse Modulation Unit Description ***/
-	/*Two 8-bit TIMER/COUNTER on Atmega328p micro controller is currently set to produce Compare Match Flag each time TCNTn register
+	/*Two 8-bit TIMER/COUNTER on ATMEGA328P microcontroller is currently set to produce Compare Match Flag each time TCNTn register
 	value is equal to Output Compare Register A (OCR0A, OCR2A) and Output Compare Register B (OCR0B, OCR2B), at approximately 1 millisecond
 	(1 ms) on 16 MHz main clock speed.
 	
@@ -199,56 +225,73 @@ int main(void){
 	c. The live time of the output is controlled by comparing the counter variable to a desired output duration: for example, six match counter is 
 	   required to produce 6 milliseconds of live-time. 
 	d. The total period (Live-time + Dead-time) between each TIMER output is controlled by comparing the counter variable to a desired period: for
-	   example, 
+	   example, //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////FINISH THIS COMMENT 
 	   
 	/***WARNING***/
-	/* The following conditions are critical to correct operation of the system.
+	/* The following conditions are critical to correct operation of the system. TIMER2 Output can be offsetted by desired amount to produce asynchronous output to TIMER0
 	a. To ensure correct pulse output, both TIMER0 and TIMER2 operation must be synchronized upon initialization.
 	b. When macro ENABLE_PRINTF is defined, Pulse Modulation will behave unexpectedly due to long delay between global interrupt disable and global 
-	   interrupt enable caused by printf function. To ensure correct functionality of the Pulse Modulation, Macro ENABLE_PRINTF must first be undefined. */
+	   interrupt enable caused by printf function. To ensure correct functionality of the Pulse Modulation, Macro ENABLE_PRINTF must first be undefined.*/
+	
 	ISR(TIMER0_COMPA_vect){
-		if(MATCH_COUNTER_T0 == 0){
-			PORTD |= (1 << PD6);
+		if(MATCH_COUNTER_T0 == PULSE_0_START_TIME){
+			PORTD |= (1 << PD6);						// Activate Output PD6
 		}
-		else if(MATCH_COUNTER_T0 == 20){	// Period of the signal
+		else if(MATCH_COUNTER_T0 == PULSE_0_REACTIVATE_TIME){
 			PORTD |= (1 << PD6);
-			MATCH_COUNTER_T0 = 0;
+			MATCH_COUNTER_T0 = PULSE_0_START_TIME;		// Reset Counter to an offset position
 		}
 	}
 
 	ISR(TIMER0_COMPB_vect){
-		if(MATCH_COUNTER_T0 == 6){		// Kill output when 6ms
-			PORTD &= ~(1 << PD6);
+		if(MATCH_COUNTER_T0 == PULSE_KILL_TIME){
+			PORTD &= ~(1 << PD6);						// Deactivate Output PD6
 		}
 		MATCH_COUNTER_T0++;
 	}
 
 	ISR(TIMER2_COMPA_vect){
-		if(MATCH_COUNTER_T2 == 40){
+		if(MATCH_COUNTER_T2 == PULSE_2_START_TIME){
 			PORTB |= (1 << PB3);
 		}
-		else if(MATCH_COUNTER_T2 == 80){
+		else if(MATCH_COUNTER_T2 == PULSE_2_REACTIVATE_TIME){
 			PORTB |= (1 << PB3);
-			MATCH_COUNTER_T2 = 40;
+			MATCH_COUNTER_T2 = PULSE_2_START_TIME;		// Reset Counter to an offset position
 		}
 	
 	}
 
 	ISR(TIMER2_COMPB_vect){
-		if(MATCH_COUNTER_T2 == 46){
-			PORTB &= ~(1 << PB3);
+		if(MATCH_COUNTER_T2 == (PULSE_2_START_TIME + PULSE_KILL_TIME)){
+			PORTB &= ~(1 << PB3);						// Deactivate Output PB3
 		}
 		MATCH_COUNTER_T2++;
 	}
+	
 #endif
+
 /*** Analog to Digital Conversion Complete Interrupt ***/
 ISR(ADC_vect){
 	
+	/*** Analog-Ditical Converter Description ***/
+	/* The Analog-Digital Converter on ATMEGA328P is currently set to take inputs from two channels: Channel 0 (located PD5) and Channel 5 (located PD0).
+	Channel 0 is assigned for coil voltage sensing.
+	Channel 5 is assigned for coil current sensing. 
+	
+	a. Upon activation, analog-digital converter is initially set to receive input from Channel 0 (coil voltage). 
+	b. At every completion of conversion, an interrupt flag is set. The output from ADC Register (ADC) is assigned to appropriate variables (raw_coil_voltage OR raw_coil_current).
+	c. After ADC register values are assigned to a variable, channel switching occurs. Channels alternate between 0 to 5, and vice versa.
+	d. A new conversion starts.
+	e. The acquired ADC Register values are stored in the variable until next cycle of conversion is complete. It is passed down to main loop for fabrication.*/
+	
+	/*** WARNING ***/
+	/* The following conditions are critical to correct operation of the system.
+	a. As of 27.09.18. the feature to sample 24 points across the input waveform is not yet tested. */
 	#ifdef ADC_DEBUG_MODE
 	// Debugger Mode...
-
+		
 		if (samples_counter == 0 && ADC_next_channel == ADC_COIL_VOLTAGE_CHANNEL){
-			raw_maximum_voltage = ADC;	// Note: Only input in Channel 2 will be considered
+			raw_maximum_voltage = ADC;						// Note: Only input in Channel 0 will be considered
 			raw_minimum_voltage = ADC;
 		}
 		if (ADC_next_channel == ADC_COIL_VOLTAGE_CHANNEL){
@@ -266,7 +309,7 @@ ISR(ADC_vect){
 			debug_ADC_channel = ADC_next_channel;
 			ADC_next_channel = ADC_COIL_CURRENT_CHANNEL;	// Next conversion is coil current shunt
 			ADMUX &= 0xf0;									// Reset to Channel 0
-			ADMUX |= 0x05;									// Set to Channel 3. (coil current shunt)
+			ADMUX |= 0x05;									// Set to Channel 5. (coil current shunt)
 		}
 		else if(ADC_next_channel == ADC_COIL_CURRENT_CHANNEL){
 			if(raw_coil_current_index < 24){
@@ -275,12 +318,13 @@ ISR(ADC_vect){
 			raw_coil_current_index++;
 			raw_ADC_output_PC5 = ADC;
 			debug_ADC_channel = ADC_next_channel;
-			ADC_next_channel = ADC_COIL_VOLTAGE_CHANNEL;	// Next conversion is back to coil voltage sensor
+			ADC_next_channel = ADC_COIL_VOLTAGE_CHANNEL;	// Next conversion is back to coil voltage shunt
 			ADMUX &= 0xf0;									// Reset to Channel 0.
-			ADMUX |= 0x00;									// Set to Channel 5. (right hall effect sensor)
+			ADMUX |= 0x00;									// Set to Channel 0. (coil voltage shunt)
 		}
 		samples_counter++;
-		ADCSRA |= (1 << ADSC);
+		ADCSRA |= (1 << ADSC);								// Start a new conversion...
+		
 	#else
 		
 		// Normal Operation Mode (w/o Hall Effect Sensors)
@@ -301,9 +345,9 @@ ISR(ADC_vect){
 			}
 			raw_coil_voltage_index++;
 			raw_ADC_output_PC0 = ADC;
-			ADC_next_channel = ADC_COIL_CURRENT_CHANNEL;// Next conversion is coil current shunt
-			ADMUX &= 0xf0;			// Reset to Channel 0
-			ADMUX |= 0x00;			// Set to Channel 3. (coil current shunt)
+			ADC_next_channel = ADC_COIL_CURRENT_CHANNEL;	// Next conversion is coil voltage shunt
+			ADMUX &= 0xf0;									// Reset to Channel 0
+			ADMUX |= 0x00;									// Set to Channel 0. (coil voltage shunt)
 		}
 		else if(ADC_next_channel == ADC_COIL_CURRENT_CHANNEL){
 			if(raw_coil_current_index < 24){
@@ -311,12 +355,12 @@ ISR(ADC_vect){
 			}
 			raw_coil_current_index++;
 			raw_ADC_output_PC5 = ADC;
-			ADC_next_channel = ADC_COIL_VOLTAGE_CHANNEL;// Next conversion is back to right hall effect sensor.
-			ADMUX &= 0xf0;			// Reset to Channel 0.
-			ADMUX |= 0x05;			// Set to Channel 5. (right hall effect sensor)
+			ADC_next_channel = ADC_COIL_VOLTAGE_CHANNEL;	// Next conversion is back to coil current shunt
+			ADMUX &= 0xf0;									// Reset to Channel 0.
+			ADMUX |= 0x05;									// Set to Channel 5. (coil current shunt)
 		}
 		samples_counter++;	
-		ADCSRA |= (1 << ADSC);
+		ADCSRA |= (1 << ADSC);								// Start a new conversion...
 	#endif
 	
 }

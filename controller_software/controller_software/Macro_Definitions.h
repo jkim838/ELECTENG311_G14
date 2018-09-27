@@ -44,7 +44,7 @@
 	#define debug_PWM_PERIOD 0.02	// Period of the PWM. Not the period of the Motor
 	#define debug_COIL_CURRENT 0.5	// Be mindful that this is a voltage level across the Current Shunt Resistor
 #endif
-#define ENABLE_PRINTF
+//#define ENABLE_PRINTF
 /* Calculation Debugger Definitions */
 #define CALCULATION_DEBUG_MODE
 #ifdef CALCULATION_DEBUG_MODE
