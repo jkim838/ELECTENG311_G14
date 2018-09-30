@@ -32,7 +32,9 @@ void adc_init(){
 	ADMUX &= ~(1 << MUX2);
 	ADMUX &= ~(1 << MUX1);
 	ADMUX &= ~(1 << MUX0);
-	ADC_next_channel = ADC_COIL_VOLTAGE_CHANNEL;	// Note: Although it is named ADC_next_channel, in this function specifically this variable signifies initial state of the ADC Channel.
+	ADC_next_channel = ADC_COIL_VOLTAGE_CHANNEL;	
+	// Note: Although it is named ADC_next_channel, in this function specifically this variable signifies 
+	// initial state of the ADC Channel.
 	
 	/** ADCSRA: ADC Control and Status Register A **/
 	/* ADC Enable */

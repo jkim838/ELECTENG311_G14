@@ -202,8 +202,8 @@ int main(void){
 	 */
 	ISR(USART_RX_vect){
 		// Reception is complete... Need to find a way to extract information.
-		if(usart_RX_index != JSON_FIXED_BUFFER_SIZE){				// Starting from index of zero, the buffer will be filled with transmission upto 37th index.
-			usart_RX[usart_RX_index] = UDR0;
+		if(usart_RX_index != JSON_FIXED_BUFFER_SIZE){				// Starting from index of zero, the buffer will be filled with 
+			usart_RX[usart_RX_index] = UDR0;						// transmission upto 37th index.
 		}
 		else if (usart_RX_index == JSON_FIXED_BUFFER_SIZE){
 			// If the index counter reaches 38, which is larger than the maximum length of the fixed JSON RX...
