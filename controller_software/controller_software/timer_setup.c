@@ -23,24 +23,36 @@
 
 void timer0_init(){
 	
-	TCCR0A |= (1 << WGM02);
-	TCCR0B |= (1 << CS01);
-	TCCR0B |= (1 << CS00);
-	OCR0A = 0;
+	/*** TCCR0A: TC0 Control Register A ***/
+	// Operate at Normal Timer Mode...
+	/*** TCCR0B: TC0 Control Register B ***/
+	/** Prescaler Selection **/
+	TCCR0B |= (1 << CS01);			// Set prescaler to 64
+	TCCR0B |= (1 << CS00);			// Xplained Mini @ F_CPU 16 MHz... F(Timer) = 250KHz
+									// IC ATMEGA328P @ F_CPU 8 MHz... F(Timer) = 125KHz
+	/*** Compare Match Register ***/
+	OCR0A = 0;											
 	OCR0B = 64;
-	TIMSK0 |= (1 << OCIE0A);
-	TIMSK0 |= (1 << OCIE0B);
+	
+	/*** TIMSK0: TC0 Interrupt Mask Register ***/
+	TIMSK0 |= (1 << OCIE0A);		// Timer/Counter0 Output Compare A Match Interrupt Enabled
+	TIMSK0 |= (1 << OCIE0B);		// Timer/Counter0 Output Compare B Match Interrupt Enabled
 	
 }
 
 void timer2_init(){
 	
-    TCCR2B |= (1 << WGM22);
-	TCCR2B |= (1 << CS22);
+	/*** TCCR2A: TC2 Control Register A ***/
+	// Operate at Normal Timer Mode...
+	/*** TCCR2B: TC2 Control Register B ***/
+	/** Prescaler Selection **/
+	TCCR2B |= (1 << CS22);			// Set prescaler to 64
+	/*** Compare Match Register ***/
 	OCR2A = 0;
 	OCR2B = 64;
-	TIMSK2 |= (1 << OCIE2A);
-	TIMSK2 |= (1 << OCIE2B);
+	/*** TIMSK2: TC2 Interrupt Mask Register ***/
+	TIMSK2 |= (1 << OCIE2A);		// Timer/Counter0 Output Compare A Match Interrupt Enabled
+	TIMSK2 |= (1 << OCIE2B);		// Timer/Counter0 Output Compare B Match Interrupt Enabled
 	
 }
 // NOTE

@@ -16,17 +16,21 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 /*** Custom Header Files ***/
 #include "timer_setup.h"		// Contains functions used to configure timer
 #include "adc_setup.h"			// Contains functions used to configure ADC
 #include "calculations.h"		// Contains functions to calculate parameters
 #include "Macro_Definitions.h"  // Contains all necessary Macro definitions
+#include "mjson.h"				// Contains functions for JSON communications
 /*** Debugger Header ***/
 #ifdef TRANSMIT_DEBUG_MODE
 	#include "debug_usart.h"		// Contains functions to transmit variable values with USART Transmission
 #else
 	#include "Comm_Setup.h"			// Contains functions to communicate between Master/Slave System.	
 #endif
+
+
 #include <util/delay.h>
 
 /*** ISR Variable Definitions ***/
@@ -56,7 +60,8 @@ volatile uint8_t PULSE_KILL_TIME = 6;
 #ifdef TRANSMIT_DEBUG_MODE
 #else
 	volatile uint8_t usart_RX_index = 0;
-	volatile unsigned char usart_RX[27]; // The maximum assumed size of Rx buffer.
+	volatile unsigned char usart_RX[JSON_FIXED_BUFFER_SIZE];			// The maximum assumed size of Rx buffer.
+	volatile unsigned char usart_RX_Complete[JSON_FIXED_BUFFER_SIZE];	// A copy of a completed JSON Transmission to be used by the main loop
 	volatile bool RX_sequence_complete = false;
 #endif
 
@@ -142,10 +147,18 @@ int main(void){
 		
 		#else
 		// normal operation mode
-		// only read from the buffer when RX is complete...
+			// constantly calculate the parameter values
+			double digitized_adc_output_PC0 = debug_adc_digitize(raw_ADC_output_PC0);
+			double digitized_adc_output_PC5 = debug_adc_digitize(raw_ADC_output_PC5);
+			double maximum_voltage = debug_adc_digitize(raw_maximum_voltage);
+			double minimum_voltage = debug_adc_digitize(raw_minimum_voltage);
+			double expected_power = calculate_power(digitized_adc_output_PC0, debug_COIL_CURRENT, debug_PWM_LIVE_TIME, debug_PWM_PERIOD);
+			
+			// only read from the buffer when RX is complete...
 			if(RX_sequence_complete == true){
 				cli();
 				// read from the buffer...
+				
 				uint8_t digit_req[3];
 				usart_obtain_req(digit_req, usart_RX);
 				uint8_t numerical_req = numerify_req(digit_req);
@@ -189,16 +202,14 @@ int main(void){
 	 */
 	ISR(USART_RX_vect){
 		// Reception is complete... Need to find a way to extract information.
-		if(usart_RX_index < 28){
+		if(usart_RX_index != JSON_FIXED_BUFFER_SIZE){				// Starting from index of zero, the buffer will be filled with transmission upto 37th index.
 			usart_RX[usart_RX_index] = UDR0;
 		}
-		else if (usart_RX_index >= 28){
-			// If Index exceeds over 28, which is larger than estimated maximum length of the RX...
-			// Reset the Index back to zero (hence allow new sequence of RX)...
-			usart_RX_index = 0
-			// Record the first bit of the RX to the buffer...
-			usart_RX[usart_RX_index] = UDR0;
-			RX_sequence_complete = true;
+		else if (usart_RX_index == JSON_FIXED_BUFFER_SIZE){
+			// If the index counter reaches 38, which is larger than the maximum length of the fixed JSON RX...
+			usart_RX_index = 0;										 // Reset the Index back to zero (hence allow new sequence of RX)...
+			usart_RX[usart_RX_index] = UDR0;						 // Record the first bit of the RX to the buffer...
+			RX_sequence_complete = true;							 // Flag to main loop that one cycle of 
 		}
 		usart_RX_index++;
 	}

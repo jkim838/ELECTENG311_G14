@@ -21,9 +21,11 @@
 
 void usart_init(uint16_t UBRR){
 	
-	//Enable USART Transmitter
+	// Enable USART Transmitter
 	UCSR0B |= (1 << TXEN0);
-	//UCSR0B |= (1 << RXEN0);
+	// Enable USART Receiver
+	UCSR0B |= (1 << RXEN0);
+	// Enable USART Receive Interrupt
 	UCSR0B |= (1 << RXCIE0);
 		
 	// Sets the mode of the USART to be asynchronous.
@@ -51,6 +53,11 @@ void usart_transmit(uint8_t data){
 	while (DATA_REG_IS_FULL);		// Waits for the UDR register to be empty.
 	UDR0 = data;					// Transmits the data.
 	
+}
+
+unsigned char usart_receive(){
+	while(RX_INCOMPLETE);		// Wait for data to be received.
+	return UDR0;
 }
 
 void usart_obtain_req(uint8_t (*target_array)[3], unsigned char(*usart_RX)[27]){

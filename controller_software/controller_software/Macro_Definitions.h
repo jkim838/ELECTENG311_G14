@@ -17,14 +17,16 @@
 /** ADC Routine Definitions **/
 #define ADC_RESOLUTION 1024
 #define ADC_REFERENCE_VOLTAGE 5
-//#define ADC_ENABLE_AUTO_TRIGGER					// When enabled, the ADC will be automatically triggered as Timer1 overflows
+//#define ADC_ENABLE_AUTO_TRIGGER						// When enabled, the ADC will be automatically triggered as Timer1 overflows
 #define ADC_COIL_VOLTAGE_CHANNEL 0
 #define ADC_COIL_CURRENT_CHANNEL 5
 /** Communication Routine Definitions **/
 #define BAUD_RATE 9600
 #define UBRR_VALUE F_CPU/16/BAUD_RATE - 1
 #define DATA_REG_IS_FULL !((1 << UDRE0) & UCSR0A)
+#define RX_INCOMPLETE !(UCSR0A & (1 << RXC0))
 #define ASCII_CONVERT 48
+#define JSON_FIXED_BUFFER_SIZE 38						// 38 characters
 
 /** Debugger Definitions **/
 /* Main Debugger Definitions*/
