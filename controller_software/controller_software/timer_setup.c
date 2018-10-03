@@ -40,21 +40,6 @@ void timer0_init(){
 	
 }
 
-void timer2_init(){
-	
-	/*** TCCR2A: TC2 Control Register A ***/
-	// Operate at Normal Timer Mode...
-	/*** TCCR2B: TC2 Control Register B ***/
-	/** Prescaler Selection **/
-	TCCR2B |= (1 << CS22);			// Set prescaler to 64
-	/*** Compare Match Register ***/
-	OCR2A = 0;
-	OCR2B = 64;
-	/*** TIMSK2: TC2 Interrupt Mask Register ***/
-	TIMSK2 |= (1 << OCIE2A);		// Timer/Counter0 Output Compare A Match Interrupt Enabled
-	TIMSK2 |= (1 << OCIE2B);		// Timer/Counter0 Output Compare B Match Interrupt Enabled
-	
-}
 // NOTE
 // PWM Period should be 8.2ms approximately at 256 prescaler.
 // Fpwm = F_CPU / (N*256) where N is prescaler value.

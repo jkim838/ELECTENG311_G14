@@ -51,10 +51,9 @@ volatile uint8_t debug_ADC_channel;
 volatile uint8_t MATCH_COUNTER_T0 = 0;
 volatile uint8_t MATCH_COUNTER_T2 = 0;
 volatile uint8_t PULSE_0_START_TIME = 0;
-volatile uint8_t PULSE_0_REACTIVATE_TIME = 20;
-volatile uint8_t PULSE_2_START_TIME = 40;
-volatile uint8_t PULSE_2_REACTIVATE_TIME = 86;	//update these variables so that PULSE 2 OFFSET can be automatically calculated.
-volatile uint8_t PULSE_KILL_TIME = 6;
+volatile uint8_t PULSE_0_REACTIVATE_TIME = 67;  //in milliseconds, state the next pulse0 HIGH point
+volatile uint8_t PULSE_2_START_TIME = 34;		//(do integer calculation) pulse 0 reactivate time / 2 + 1
+volatile uint8_t PULSE_KILL_TIME = 17;			// duty cycle based on reactivate time
 
 /** Master Debug Routine ISR **/
 #ifdef TRANSMIT_DEBUG_MODE
@@ -95,7 +94,6 @@ int main(void){
 	/* ATMEGA328P Module Initialization */
 	// Remove double slashes to activate...
 	timer0_init();	// Set up Timer 0 for Pulse Modulation
-	timer2_init();	// Set up Timer 2 and Pulse Modulation
 	adc_init();		// Set up ADC
 	#ifdef TRANSMIT_DEBUG_MODE
 		stdout = &mystdout;
@@ -236,7 +234,7 @@ int main(void){
 	c. The live time of the output is controlled by comparing the counter variable to a desired output duration: for example, six match counter is 
 	   required to produce 6 milliseconds of live-time. 
 	d. The total period (Live-time + Dead-time) between each TIMER output is controlled by comparing the counter variable to a desired period: for
-	   example, //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////FINISH THIS COMMENT 
+	   example, //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////PLEASE UPDATE THIS COMMENT
 	   
 	/***WARNING***/
 	/* The following conditions are critical to correct operation of the system. TIMER2 Output can be offsetted by desired amount to produce asynchronous output to TIMER0
@@ -246,11 +244,18 @@ int main(void){
 	
 	ISR(TIMER0_COMPA_vect){
 		if(MATCH_COUNTER_T0 == PULSE_0_START_TIME){
+			PORTB &= ~(1 << PB3);
 			PORTD |= (1 << PD6);						// Activate Output PD6
 		}
+		else if(MATCH_COUNTER_T0 == PULSE_2_START_TIME){
+			// debug... make PB3 high after 1/2 of period we desire
+			PORTD &= ~(1 << PD6);
+			PORTB |= (1 << PB3);
+		}
 		else if(MATCH_COUNTER_T0 == PULSE_0_REACTIVATE_TIME){
-			PORTD |= (1 << PD6);
-			MATCH_COUNTER_T0 = PULSE_0_START_TIME;		// Reset Counter to an offset position
+			PORTB &= ~(1 << PB3);
+			PORTD |=  (1 << PD6);
+			MATCH_COUNTER_T0 = PULSE_0_START_TIME;
 		}
 	}
 
@@ -258,25 +263,10 @@ int main(void){
 		if(MATCH_COUNTER_T0 == PULSE_KILL_TIME){
 			PORTD &= ~(1 << PD6);						// Deactivate Output PD6
 		}
+		if(MATCH_COUNTER_T0 == PULSE_KILL_TIME + PULSE_2_START_TIME){
+			PORTB &= ~(1 << PB3);
+		}
 		MATCH_COUNTER_T0++;
-	}
-
-	ISR(TIMER2_COMPA_vect){
-		if(MATCH_COUNTER_T2 == PULSE_2_START_TIME){
-			PORTB |= (1 << PB3);
-		}
-		else if(MATCH_COUNTER_T2 == PULSE_2_REACTIVATE_TIME){
-			PORTB |= (1 << PB3);
-			MATCH_COUNTER_T2 = PULSE_2_START_TIME;		// Reset Counter to an offset position
-		}
-	
-	}
-
-	ISR(TIMER2_COMPB_vect){
-		if(MATCH_COUNTER_T2 == (PULSE_2_START_TIME + PULSE_KILL_TIME)){
-			PORTB &= ~(1 << PB3);						// Deactivate Output PB3
-		}
-		MATCH_COUNTER_T2++;
 	}
 	
 #endif

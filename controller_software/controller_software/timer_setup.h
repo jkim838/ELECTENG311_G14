@@ -13,4 +13,3 @@ volatile uint8_t new_PWM_frequency;
 uint8_t PWM1_DC_control;
 
 void timer0_init();
-void timer2_init();
