@@ -20,23 +20,24 @@
 
 /*** Custom Macro Definition ***/
 
-
-void timer0_init(){
+void timer2_init(){
 	
-	/*** TCCR0A: TC0 Control Register A ***/
+	/*** TCCR2A: TC2 Control Register A ***/
 	// Operate at Normal Timer Mode...
-	/*** TCCR0B: TC0 Control Register B ***/
+	/*** TCCR2B: TC2 Control Register B ***/
 	/** Prescaler Selection **/
-	TCCR0B |= (1 << CS01);			// Set prescaler to 64
-	TCCR0B |= (1 << CS00);			// Xplained Mini @ F_CPU 16 MHz... F(Timer) = 250KHz
+	#ifdef XPLAINED_MINI_MODE
+	TCCR2B |= (1 << CS22);			// Set prescaler to 64
+									// Xplained Mini @ F_CPU 16 MHz... F(Timer) = 250KHz
 									// IC ATMEGA328P @ F_CPU 8 MHz... F(Timer) = 125KHz
-	/*** Compare Match Register ***/
-	OCR0A = 0;											
-	OCR0B = 64;
-	
+	#else
+									// Set prescaler to 8
+	TCCR2B |= (1 << CS21);			// Xplained Mini @ F_CPU 16 MHz... F(Timer) = 250KHz
+	//TCCR2B |= (1 << CS20);			// IC ATMEGA328P @ F_CPU 8 MHz... F(Timer) = 125KHz
+	#endif
 	/*** TIMSK0: TC0 Interrupt Mask Register ***/
-	TIMSK0 |= (1 << OCIE0A);		// Timer/Counter0 Output Compare A Match Interrupt Enabled
-	TIMSK0 |= (1 << OCIE0B);		// Timer/Counter0 Output Compare B Match Interrupt Enabled
+	TIMSK2 |= (1 << OCIE2A);		// Timer/Counter2 Output Compare A Match Interrupt Enabled
+	TIMSK2 |= (1 << OCIE2B);		// Timer/Counter2 Output Compare B Match Interrupt Enabled
 	
 }
 

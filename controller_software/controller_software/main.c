@@ -51,9 +51,16 @@ volatile uint8_t debug_ADC_channel;
 volatile uint8_t MATCH_COUNTER_T0 = 0;
 volatile uint8_t MATCH_COUNTER_T2 = 0;
 volatile uint8_t PULSE_0_START_TIME = 0;
-volatile uint8_t PULSE_0_REACTIVATE_TIME = 67;  //in milliseconds, state the next pulse0 HIGH point
-volatile uint8_t PULSE_2_START_TIME = 34;		//(do integer calculation) pulse 0 reactivate time / 2 + 1
-volatile uint8_t PULSE_KILL_TIME = 17;			// duty cycle based on reactivate time
+#ifdef XPLAINED_MINI_MODE
+	volatile uint8_t PULSE_0_REACTIVATE_TIME = 134;  //in milliseconds, state the next pulse0 HIGH point
+	volatile uint8_t PULSE_2_START_TIME = 67;		//(do integer calculation) pulse 0 reactivate time / 2 + 1
+	volatile uint8_t PULSE_KILL_TIME = 34;			// duty cycle based on reactivate time
+#else
+	volatile uint8_t PULSE_0_REACTIVATE_TIME = 50;  //in milliseconds, state the next pulse0 HIGH point
+	volatile uint8_t PULSE_2_START_TIME = 25;		//(do integer calculation) pulse 0 reactivate time / 2 + 1
+	volatile uint8_t PULSE_KILL_TIME = 13;			// duty cycle based on reactivate time
+#endif
+
 
 /** Master Debug Routine ISR **/
 #ifdef TRANSMIT_DEBUG_MODE
@@ -93,7 +100,7 @@ int main(void){
 		
 	/* ATMEGA328P Module Initialization */
 	// Remove double slashes to activate...
-	timer0_init();	// Set up Timer 0 for Pulse Modulation
+	timer2_init();	// Set up Timer 0 for Pulse Modulation
 	adc_init();		// Set up ADC
 	#ifdef TRANSMIT_DEBUG_MODE
 		stdout = &mystdout;
@@ -242,7 +249,7 @@ int main(void){
 	b. When macro ENABLE_PRINTF is defined, Pulse Modulation will behave unexpectedly due to long delay between global interrupt disable and global 
 	   interrupt enable caused by printf function. To ensure correct functionality of the Pulse Modulation, Macro ENABLE_PRINTF must first be undefined.*/
 	
-	ISR(TIMER0_COMPA_vect){
+	ISR(TIMER2_COMPA_vect){
 		if(MATCH_COUNTER_T0 == PULSE_0_START_TIME){
 			PORTB &= ~(1 << PB3);
 			PORTD |= (1 << PD6);						// Activate Output PD6
@@ -259,7 +266,7 @@ int main(void){
 		}
 	}
 
-	ISR(TIMER0_COMPB_vect){
+	ISR(TIMER2_COMPB_vect){
 		if(MATCH_COUNTER_T0 == PULSE_KILL_TIME){
 			PORTD &= ~(1 << PD6);						// Deactivate Output PD6
 		}

@@ -10,7 +10,12 @@
 
 /*** Custom Macro Definitions ***/
 /** Main Routine Definitions **/
-#define F_CPU 16000000UL
+#define XPLAINED_MINI_MODE
+#ifdef XPLAINED_MINI_MODE
+	#define F_CPU 16000000UL
+#else
+	#define F_CPU 8000000UL
+#endif
 /** Timer Routine Definitions **/
 #define TIMER_MAX 255
 #define TIMER_LOW 0
