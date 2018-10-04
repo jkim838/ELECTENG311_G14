@@ -41,19 +41,11 @@ volatile uint16_t raw_coil_current;
 
 
 /** Timer/Pulse Modulation ISR **/
-volatile uint8_t MATCH_COUNTER_T2 = 0;
-volatile uint8_t PULSE_0_START_TIME = 0;
-#ifdef XPLAINED_MINI_MODE
-	// The system is being tested, and it is running at 16MHz.
-	volatile uint8_t PULSE_0_REACTIVATE_TIME = 134; // In milliseconds, state the next PULSE_0 HIGH time.
-	volatile uint8_t PULSE_2_START_TIME = 67;		// PULSE_0_REACTIVATE_TIME / 2
-	volatile uint8_t PULSE_KILL_TIME = 34;			// 0.5 * desired duty cycle based on PULSE_0_REACTIVATE_TIME
-#else
-	// The system is running at 8MHz.
-	volatile uint8_t PULSE_0_REACTIVATE_TIME = 50;  // In milliseconds 0.5 * Next PULSE_0 HIGH TIME
-	volatile uint8_t PULSE_2_START_TIME = 25;		// PULSE_0_REACTIVATE_TIME / 2 
-	volatile uint8_t PULSE_KILL_TIME = 13;			// 0.5 * desired duty cycle based on PULSE_0_REACTIVATE_TIME
-#endif
+volatile uint8_t MATCH_COUNTER_T2 = 0;			// DO NOT CHANGE
+volatile uint8_t PULSE_0_START_TIME = 0;		// DO NOT CHANGE
+volatile uint8_t PULSE_0_REACTIVATE_TIME = 134; // In milliseconds, state the next PULSE_0 HIGH time.
+volatile uint8_t PULSE_2_START_TIME = 67;		// PULSE_0_REACTIVATE_TIME / 2
+volatile uint8_t PULSE_KILL_TIME = 34;			// 0.5 * desired duty cycle based on PULSE_0_REACTIVATE_TIME
 
 
 /** Master Debug Routine ISR **/
@@ -206,23 +198,19 @@ int main(void){
 
 	/*** Timed-Pulse Modulation Unit Description ***/
 	/*An 8-bit TIMER/COUNTER 2 (TC2) on ATMEGA328P microcontroller is currently set to overflow at approximately 1 millisecond.
-	(1 ms) on a 16MHz main clock speed. On a 8MHz main clock speed, the time-to-overflow will increase to 2 milliseconds (2 ms). 
+	(1 ms)
 	
 	a. At every compare Match Flag A, the designated output pin will produce 5V (HIGH).
 	b. At every Compare Match Flag B, the match counter variable (MATCH_COUNTER_T2) is incremented, indicating 
 	   how many milliseconds has passed since the pin was activated.
-	c. On a 16MHz main clock speed, the live time of the output is controlled by setting the variable "PULSE_KILL_TIME" to a
-	   desired output duration: (i.e. when the match counter reaches the value of the "PULSE_KILL_TIME", the timed-pulse output
-	   is deactivated. For example, to produce a live-time of 6 ms, PULSE_KILL_TIME must be set to '6'.
-	d. On an 8MHz main clock speed, take the half of 16MHz to produce the same amount of live time. For example,
-	   to produce a live-time of 6 ms, "PULSE_KILL_TIME" must be set to '3'.
-	e. If the values for "PULSE_KILL_TIME" is not an integer, then take the ceiling of the number. (i.e. 3.34 -> 4).
-	f. On a 16MHz main clock speed, the total period of the signal between each polarity of timed-pulse output (i.e. PD6 and PB3) 
-	   is controlled by setting the variable "PULSE_0_REACTIVATE_TIME" to the double of the desired period: for example, to 
-	   produce a total "effective" period of 12 ms (i.e. 12 ms of PD6 + 12 ms of PB3), set "PULSE_0_REACTIVATE_TIME" to '24'.
-	g. On a 8MHz main clock speed, take the half of 16MHz to produce the same amount of effective period. For example, to produce
-	   a total "effective" period of 12 ms (i.e. 12 ms of PD6 + 12 ms of PB3), set "PULSE_0_REACTIVATE_TIME" to 12.
-	h. The variable "PULSE_2_ACTIVATE_TIME" must always be half of what was defined for "PULSE_0_REACTIVATE_TIME". If the value
+	c. The live time of the output is controlled by setting the variable "PULSE_KILL_TIME" to a desired output duration: 
+	   (i.e. when the match counter reaches the value of the "PULSE_KILL_TIME", the timed-pulse output is deactivated. For 
+	   example, to produce a live-time of 6 ms, PULSE_KILL_TIME must be set to '6'.
+	d. If the values for "PULSE_KILL_TIME" is not an integer, then take the ceiling of the number. (i.e. 3.34 -> 4).
+	e. The total period of the signal between each polarity of timed-pulse output (i.e. PD6 and PB3) is controlled by setting 
+	   the variable "PULSE_0_REACTIVATE_TIME" to the double of the desired period: for example, to produce a total "effective" 
+	   period of 12 ms (i.e. 12 ms of PD6 + 12 ms of PB3), set "PULSE_0_REACTIVATE_TIME" to '24'.
+	f. The variable "PULSE_2_ACTIVATE_TIME" must always be half of what was defined for "PULSE_0_REACTIVATE_TIME". If the value
 	   for the variable is not an integer. Take the ceiling of the number (i.e. 3.34 -> 4).
 	   
 	/***WARNING***/

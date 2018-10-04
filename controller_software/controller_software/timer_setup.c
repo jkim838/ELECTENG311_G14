@@ -27,13 +27,15 @@ void timer2_init(){
 	/*** TCCR2B: TC2 Control Register B ***/
 	/** Prescaler Selection **/
 	#ifdef XPLAINED_MINI_MODE
-	TCCR2B |= (1 << CS22);			// Set prescaler to 64
-									// Xplained Mini @ F_CPU 16 MHz... F(Timer) = 250KHz
-									// IC ATMEGA328P @ F_CPU 8 MHz... F(Timer) = 125KHz
+	// The program is being tested on a Xplained Mini Board, and it is running at 16MHz.
+		TCCR2B |=  (1 << CS22);			// Set prescaler to 64
+		TCCR2B &= ~(1 << CS21);			// @F_CPU 16 MHz... F(Timer) = 250KHz
+		TCCR2B &= ~(1 << CS20);			
 	#else
-									// Set prescaler to 8
-	TCCR2B |= (1 << CS21);			// Xplained Mini @ F_CPU 16 MHz... F(Timer) = 250KHz
-	//TCCR2B |= (1 << CS20);		// IC ATMEGA328P @ F_CPU 8 MHz... F(Timer) = 125KHz
+	// The program is running at 8MHz.
+		TCCR2B |=  (1 << CS22);			// Set prescaler to 32
+		TCCR2B &= ~(1 << CS21);			// @F_CPU 8 MHz... F(Timer) = 250KHz
+		TCCR2B &= ~(1 << CS20);		    
 	#endif
 	/*** TIMSK0: TC0 Interrupt Mask Register ***/
 	TIMSK2 |= (1 << OCIE2A);		// Timer/Counter2 Output Compare A Match Interrupt Enabled
@@ -42,5 +44,3 @@ void timer2_init(){
 }
 
 // NOTE
-// PWM Period should be 8.2ms approximately at 256 prescaler.
-// Fpwm = F_CPU / (N*256) where N is prescaler value.
