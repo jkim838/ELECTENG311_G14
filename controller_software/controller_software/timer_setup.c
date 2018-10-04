@@ -33,7 +33,7 @@ void timer2_init(){
 	#else
 									// Set prescaler to 8
 	TCCR2B |= (1 << CS21);			// Xplained Mini @ F_CPU 16 MHz... F(Timer) = 250KHz
-	//TCCR2B |= (1 << CS20);			// IC ATMEGA328P @ F_CPU 8 MHz... F(Timer) = 125KHz
+	//TCCR2B |= (1 << CS20);		// IC ATMEGA328P @ F_CPU 8 MHz... F(Timer) = 125KHz
 	#endif
 	/*** TIMSK0: TC0 Interrupt Mask Register ***/
 	TIMSK2 |= (1 << OCIE2A);		// Timer/Counter2 Output Compare A Match Interrupt Enabled
