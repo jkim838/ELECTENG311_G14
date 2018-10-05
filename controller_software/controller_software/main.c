@@ -149,7 +149,9 @@ int main(void){
 						PULSE_KILL_TIME = 0;
 					}
 					else if(numerical_req > TIMER_LOW && numerical_req != TIMER_LOW && numerical_req <= TIMER_LOW_FLOW){
-						
+						PULSE_0_REACTIVATE_TIME = 200;
+						PULSE_2_START_TIME = 100;
+						PULSE_KILL_TIME = ((double)(0.3 * numerical_req) * PULSE_0_REACTIVATE_TIME)/200;
 					}
 					else if(numerical_req < TIMER_MAX && numerical_req != TIMER_MAX && numerical_req >= TIMER_HIGH_FLOW){
 						
