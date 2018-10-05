@@ -99,8 +99,7 @@ int main(void){
 		#ifdef TRANSMIT_DEBUG_MODE
 		//debug mode... ignore normal operational cycle
 			// Fetch Parameters...
-			uint8_t numerical_req;
-			uint8_t digitized_req[3];
+
 			#ifdef ADC_DEBUG_MODE
 				// try analog to digital conversion on the ADC, and display its output to the PuTTy.
 				double digitized_adc_output_PC0 = debug_adc_digitize(raw_ADC_output_PC0);
@@ -109,7 +108,8 @@ int main(void){
 			#endif
 			// When buffer is filled with info.
 			if(RX_sequence_complete){
-				PORTB ^= (1 << PB5);
+				uint16_t numerical_req;
+				uint8_t digitized_req[3];
 				//Verify Motor ID...
 				if(RX_buffer[0] == '{' && RX_buffer[1] == '"' && RX_buffer[2] == '3' && RX_buffer[3] == '"' && RX_buffer[4] == ':'){
 					for(uint8_t i = 0; i < JSON_FIXED_BUFFER_SIZE; i++){
@@ -134,10 +134,31 @@ int main(void){
 						}
 					}
 					// For testing purposes, print out the acquired "req" to the putty.
+					numerical_req = (digitized_req[0]-'0') * 100 + (digitized_req[1]-'0') * 10 + (digitized_req[2]-'0');
 					for(uint8_t i = 0; i< 3; i++){
 						usart_transmit(digitized_req[i]);
 					}
-					numerical_req = (digitized_req[0] * 100) + (digitized_req[1] * 10) + (digitized_req[2]);
+					if(numerical_req == TIMER_MAX){
+						PULSE_0_REACTIVATE_TIME = 80;
+						PULSE_2_START_TIME = 40;
+						PULSE_KILL_TIME = 10;
+					}
+					else if(numerical_req == TIMER_LOW){
+						PULSE_0_REACTIVATE_TIME = 200;
+						PULSE_2_START_TIME = 100;
+						PULSE_KILL_TIME = 0;
+					}
+					else if(numerical_req > TIMER_LOW && numerical_req != TIMER_LOW && numerical_req <= TIMER_LOW_FLOW){
+						
+					}
+					else if(numerical_req < TIMER_MAX && numerical_req != TIMER_MAX && numerical_req >= TIMER_HIGH_FLOW){
+						
+					}
+					else{
+						PULSE_0_REACTIVATE_TIME = 200;
+						PULSE_2_START_TIME = 100;
+						PULSE_KILL_TIME = 50;
+					}
 					RX_sequence_complete = false;
 				}
 			}
@@ -146,10 +167,10 @@ int main(void){
 
 		#endif
 		
-// 		#ifdef XPLAINED_MINI_LED_STROBE
-// 			PORTB ^= (1 << PB5);
-// 			_delay_ms(100);
-// 		#endif
+		#ifdef XPLAINED_MINI_LED_STROBE
+			PORTB ^= (1 << PB5);
+			_delay_ms(100);
+		#endif
 		
 
     }
@@ -224,7 +245,7 @@ ISR(TIMER2_COMPA_vect){
 	else if(MATCH_COUNTER_T2 == PULSE_0_REACTIVATE_TIME){
 		PORTB &= ~(1 << PB3);						// Deactivate Output on PB3
 		PORTD |=  (1 << PD6);						// Activate Output on PD6
-		MATCH_COUNTER_T2 = PULSE_0_START_TIME;
+		MATCH_COUNTER_T2 = PULSE_0_START_TIME;		// Reset counter to zero
 	}
 }
 

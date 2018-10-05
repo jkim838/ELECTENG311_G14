@@ -19,6 +19,8 @@
 /** Timer Routine Definitions **/
 #define TIMER_MAX 255
 #define TIMER_LOW 0
+#define TIMER_HIGH_FLOW 178
+#define TIMER_LOW_FLOW 177
 /** ADC Routine Definitions **/
 #define ADC_RESOLUTION 1024
 #define ADC_REFERENCE_VOLTAGE 5
