@@ -3,7 +3,7 @@
  *
  * Created: 14/09/2018 8:12:55 AM
  * Author : Oliver K. jkim838 846548800
- * Revision 1.3.0
+ * Revision 1.3.3
  *
  * Description:
  * Primary program to control the operation condition of the linear compressor motor unit.
@@ -25,9 +25,9 @@
 #include "mjson.h"				// Contains functions for JSON communications
 /*** Debugger Header ***/
 #ifdef TRANSMIT_DEBUG_MODE
-	#include "debug_usart.h"		// Contains functions to transmit variable values with USART Transmission
+	#include "Comm_Setup.h"			// Contains functions to communicate between Master/Slave System.
 #else
-	#include "Comm_Setup.h"			// Contains functions to communicate between Master/Slave System.	
+	#include "debug_usart.h"		// Contains functions to transmit variable values with USART Transmission
 #endif
 
 
@@ -48,16 +48,14 @@ volatile uint8_t PULSE_2_START_TIME = 67;		// PULSE_0_REACTIVATE_TIME / 2
 volatile uint8_t PULSE_KILL_TIME = 34;			// 0.5 * desired duty cycle based on PULSE_0_REACTIVATE_TIME
 
 
-/** Master Debug Routine ISR **/
-#ifdef TRANSMIT_DEBUG_MODE
-#else
-	volatile uint8_t usart_RX_index = 0;
-	volatile unsigned char usart_RX[JSON_FIXED_BUFFER_SIZE];			// The maximum assumed size of Rx buffer.
-	volatile bool RX_sequence_complete = false;							// Flow rate request will be read when the buffer is full
-#endif
+volatile uint8_t usart_RX_index = 0;
+volatile unsigned char RX_buffer[JSON_FIXED_BUFFER_SIZE];			// The maximum assumed size of Rx buffer.
+volatile bool RX_sequence_complete = false;							// Flow rate request will be read when the buffer is full
+
 
 /*** Global Variable Definitions ***/
 #ifdef TRANSMIT_DEBUG_MODE
+#else
 	int usart_putchar_printf(char var, FILE *stream);
 	static FILE mystdout = FDEV_SETUP_STREAM(usart_putchar_printf, NULL, _FDEV_SETUP_WRITE);
 #endif
@@ -86,11 +84,11 @@ int main(void){
 	timer2_init();	// Set up Timer 0 for Pulse Modulation
 	adc_init();		// Set up ADC
 	#ifdef TRANSMIT_DEBUG_MODE
+		usart_init(UBRR_VALUE);
+	#else
 		stdout = &mystdout;
 		// enable USART for transmitting digital conversion result to PuTTy...
 		debug_usart_init(debug_UBRR);
-	#else
-		usart_init(UBRR_VALUE);
 	#endif
 	
 	sei();
@@ -98,57 +96,60 @@ int main(void){
     /* Main Loop */
     while (1) {
 		
-		#ifdef ENABLE_DEBUGGING_PARAMETER
-			uint8_t parameter1;
-			uint8_t parameter2;
-		#endif
-		
 		#ifdef TRANSMIT_DEBUG_MODE
 		//debug mode... ignore normal operational cycle
+			// Fetch Parameters...
+			uint8_t numerical_req;
+			uint8_t digitized_req[3];
 			#ifdef ADC_DEBUG_MODE
-
 				// try analog to digital conversion on the ADC, and display its output to the PuTTy.
 				double digitized_adc_output_PC0 = debug_adc_digitize(raw_ADC_output_PC0);
 				double digitized_adc_output_PC5 = debug_adc_digitize(raw_ADC_output_PC5);
 				double expected_power = calculate_power(digitized_adc_output_PC0, debug_COIL_CURRENT, debug_PWM_LIVE_TIME, debug_PWM_PERIOD);
-				#ifdef ENABLE_PRINTF
-					cli();
-					printf("Current Channel: %d\n", debug_ADC_channel);
-					printf("Next Channel: %d\n", ADC_next_channel);
-					printf("ADC0 Output (PC0): %f\nADC5 Output (PC5): %f\n", digitized_adc_output_PC0, digitized_adc_output_PC5);
-					#ifdef CALCULATION_DEBUG_MODE
-						printf("Estimated Power Consumption: %f\n", expected_power);
-					#endif
-					printf("\n");
-					sei();
-				#endif
-				
 			#endif
-		
-		#else
-		// normal operation mode
-			// constantly calculate the parameter values
-			double digitized_adc_output_PC0 = debug_adc_digitize(raw_ADC_output_PC0);
-			double digitized_adc_output_PC5 = debug_adc_digitize(raw_ADC_output_PC5);
-			double expected_power = calculate_power(digitized_adc_output_PC0, debug_COIL_CURRENT, debug_PWM_LIVE_TIME, debug_PWM_PERIOD);
-			
-			// only read from the buffer when RX is complete...
-			if(RX_sequence_complete == true){
-				// read from the buffer...
-				uint8_t digit_req[3];
-				usart_obtain_req(digit_req, usart_RX);
-				uint8_t numerical_req = numerify_req(digit_req);
-				// prepare report... (calculation etc...)
-				// transmit report...
-				RX_sequence_complete = false;
-				
+			// When buffer is filled with info.
+			if(RX_sequence_complete){
+				PORTB ^= (1 << PB5);
+				//Verify Motor ID...
+				if(RX_buffer[0] == '{' && RX_buffer[1] == '"' && RX_buffer[2] == '3' && RX_buffer[3] == '"' && RX_buffer[4] == ':'){
+					for(uint8_t i = 0; i < JSON_FIXED_BUFFER_SIZE; i++){
+						//check if "req" is present...
+						if((RX_buffer[i]) == 'q' && (RX_buffer[i + 1]) == '"' && (RX_buffer[i + 2]) == ':' && (RX_buffer[i + 3]) == '"'){
+							// req is present
+							if(RX_buffer[i + 5] == '"'){
+								digitized_req[0] = 0;
+								digitized_req[1] = 0;
+								digitized_req[2] = (RX_buffer[i + 4]);
+							}
+							else if(RX_buffer[i + 6] == '"'){
+								digitized_req[0] = 0;
+								digitized_req[1] = (RX_buffer[i + 4]);
+								digitized_req[2] = (RX_buffer[i + 5]);
+							}
+							else if(RX_buffer[i + 7] == '"'){
+								digitized_req[0] = (RX_buffer[i + 4]);
+								digitized_req[1] = (RX_buffer[i + 5]);
+								digitized_req[2] = (RX_buffer[i + 6]);
+							}
+						}
+					}
+					// For testing purposes, print out the acquired "req" to the putty.
+					for(uint8_t i = 0; i< 3; i++){
+						usart_transmit(digitized_req[i]);
+					}
+					numerical_req = (digitized_req[0] * 100) + (digitized_req[1] * 10) + (digitized_req[2]);
+					RX_sequence_complete = false;
+				}
 			}
+
+		#else
+
 		#endif
 		
-		#ifdef XPLAINED_MINI_LED_STROBE
-			PORTB ^= (1 << PB5);
-			_delay_ms(100);
-		#endif
+// 		#ifdef XPLAINED_MINI_LED_STROBE
+// 			PORTB ^= (1 << PB5);
+// 			_delay_ms(100);
+// 		#endif
 		
 
     }
@@ -159,94 +160,84 @@ int main(void){
 }
 
 /*** Interrupt Service Routine Definitions ***/
-#ifdef TRANSMIT_DEBUG_MODE
-	// Do not setup communication program when in debugging mode.
-#else
 
-	/*** USART Receive Complete Description ***/
-	/* USART on ATMEGA328P microcontroller is currently set to transmit and receive 8-bit ASCII characters across Master 
-	(PC or equivalent system) and Slave (Linear Motor Controller) in JSON structure at a baud-rate of 9600.
+/*** USART Receive Complete Description ***/
+/* USART on ATMEGA328P microcontroller is currently set to transmit and receive 8-bit ASCII characters across Master 
+(PC or equivalent system) and Slave (Linear Motor Controller) in JSON structure at a baud-rate of 9600.
 	
-	The input length to slave system is consistent in length of 38 characters (in ASCII) when fixed JSON is used. When slave 
-	successfully receive 8-bit transmission from the master, USART Receive Complete flag is set.
+The input length to slave system is consistent in length of 38 characters (in ASCII) when fixed JSON is used. When slave 
+successfully receive 8-bit transmission from the master, USART Receive Complete flag is set.
 	
-	a. The received data (an ASCII character) is stored in an unsigned character buffer (usartRX).
-	b. The index counter for the buffer is incremented for the upcoming data.
-	c. On the 28th count (i.e. one sequence of master-slave communication is complete), reset the index position to overwrite the
-	   first character of the buffer.
-	 */
-	ISR(USART_RX_vect){
-		// Reception is complete... Need to find a way to extract information.
-		if(usart_RX_index != JSON_FIXED_BUFFER_SIZE){				// Starting from index of zero, the buffer will be filled with 
-			usart_RX[usart_RX_index] = UDR0;						// transmission up to 37th index.
-		}
-		else if (usart_RX_index == JSON_FIXED_BUFFER_SIZE){
-			// If the index counter reaches 38, which is larger than the maximum length of the fixed JSON RX...
-			usart_RX_index = 0;										 // Reset the Index back to zero (hence allow new sequence of RX)...
-			usart_RX[usart_RX_index] = UDR0;						 // Record the first bit of the RX to the buffer...
-			RX_sequence_complete = true;							 // Flag to main loop that one cycle of RX is complete.
-		}
+a. The received data (an ASCII character) is stored in an unsigned character buffer (usartRX).
+b. The index counter for the buffer is incremented for the upcoming data.
+c. On the 28th count (i.e. one sequence of master-slave communication is complete), reset the index position to overwrite the
+	first character of the buffer.
+	*/
+ISR(USART_RX_vect){
+	// Reception is complete... Need to find a way to extract information.
+	if(usart_RX_index != JSON_FIXED_BUFFER_SIZE - 1){			// Starting from index of zero, the buffer will be filled with 
+		RX_buffer[usart_RX_index] = UDR0;						// transmission up to 37th index.
 		usart_RX_index++;
 	}
-	
-#endif
+	else if (usart_RX_index == JSON_FIXED_BUFFER_SIZE - 1){
+		// If the index counter reaches 38, which is larger than the maximum length of the fixed JSON RX...
+		RX_buffer[usart_RX_index] = UDR0;						 // Record the first bit of the RX to the buffer...
+		RX_sequence_complete = true;							 // Flag to main loop that one cycle of RX is complete.
+		usart_RX_index = 0;										 // Reset the Index back to zero (hence allow new sequence of RX)...
+	}
+		
+}
 
-#ifdef ENABLE_PRINTF
-	// Pulse Output is disabled due to unexpected behavior caused by long delays between global interrupt disabled and enabled.
-	
-#else
 
-	/*** Timed-Pulse Modulation Unit Description ***/
-	/*An 8-bit TIMER/COUNTER 2 (TC2) on ATMEGA328P microcontroller is currently set to overflow at approximately 1 millisecond.
-	(1 ms)
+/*** Timed-Pulse Modulation Unit Description ***/
+/*An 8-bit TIMER/COUNTER 2 (TC2) on ATMEGA328P microcontroller is currently set to overflow at approximately 1 millisecond.
+(1 ms)
 	
-	a. At every compare Match Flag A, the designated output pin will produce 5V (HIGH).
-	b. At every Compare Match Flag B, the match counter variable (MATCH_COUNTER_T2) is incremented, indicating 
-	   how many milliseconds has passed since the pin was activated.
-	c. The live time of the output is controlled by setting the variable "PULSE_KILL_TIME" to a desired output duration: 
-	   (i.e. when the match counter reaches the value of the "PULSE_KILL_TIME", the timed-pulse output is deactivated. For 
-	   example, to produce a live-time of 6 ms, PULSE_KILL_TIME must be set to '6'.
-	d. If the values for "PULSE_KILL_TIME" is not an integer, then take the ceiling of the number. (i.e. 3.34 -> 4).
-	e. The total period of the signal between each polarity of timed-pulse output (i.e. PD6 and PB3) is controlled by setting 
-	   the variable "PULSE_0_REACTIVATE_TIME" to the double of the desired period: for example, to produce a total "effective" 
-	   period of 12 ms (i.e. 12 ms of PD6 + 12 ms of PB3), set "PULSE_0_REACTIVATE_TIME" to '24'.
-	f. The variable "PULSE_2_ACTIVATE_TIME" must always be half of what was defined for "PULSE_0_REACTIVATE_TIME". If the value
-	   for the variable is not an integer. Take the ceiling of the number (i.e. 3.34 -> 4).
+a. At every compare Match Flag A, the designated output pin will produce 5V (HIGH).
+b. At every Compare Match Flag B, the match counter variable (MATCH_COUNTER_T2) is incremented, indicating 
+	how many milliseconds has passed since the pin was activated.
+c. The live time of the output is controlled by setting the variable "PULSE_KILL_TIME" to a desired output duration: 
+	(i.e. when the match counter reaches the value of the "PULSE_KILL_TIME", the timed-pulse output is deactivated. For 
+	example, to produce a live-time of 6 ms, PULSE_KILL_TIME must be set to '6'.
+d. If the values for "PULSE_KILL_TIME" is not an integer, then take the ceiling of the number. (i.e. 3.34 -> 4).
+e. The total period of the signal between each polarity of timed-pulse output (i.e. PD6 and PB3) is controlled by setting 
+	the variable "PULSE_0_REACTIVATE_TIME" to the double of the desired period: for example, to produce a total "effective" 
+	period of 12 ms (i.e. 12 ms of PD6 + 12 ms of PB3), set "PULSE_0_REACTIVATE_TIME" to '24'.
+f. The variable "PULSE_2_ACTIVATE_TIME" must always be half of what was defined for "PULSE_0_REACTIVATE_TIME". If the value
+	for the variable is not an integer. Take the ceiling of the number (i.e. 3.34 -> 4).
 	   
-	/***WARNING***/
-	/* The following conditions are critical to correct operation of the system. 
-	a. When macro ENABLE_PRINTF is defined, Pulse Modulation will behave unexpectedly due to long delay between global interrupt 
-	   disable and global interrupt enable caused by printf function. To ensure correct functionality of the Pulse Modulation, 
-	   Macro ENABLE_PRINTF must first be undefined.*/
+/***WARNING***/
+/* The following conditions are critical to correct operation of the system. 
+a. When macro ENABLE_PRINTF is defined, Pulse Modulation will behave unexpectedly due to long delay between global interrupt 
+	disable and global interrupt enable caused by printf function. To ensure correct functionality of the Pulse Modulation, 
+	Macro ENABLE_PRINTF must first be undefined.*/
 	
-	ISR(TIMER2_COMPA_vect){
-		if(MATCH_COUNTER_T2 == PULSE_0_START_TIME){
-			PORTB &= ~(1 << PB3);						// Deactivate Output on PB3
-			PORTD |= (1 << PD6);						// Activate Output on PD6
-		}
-		else if(MATCH_COUNTER_T2 == PULSE_2_START_TIME){
-			PORTD &= ~(1 << PD6);						// Deactivate Output on PD6
-			PORTB |= (1 << PB3);						// Activate Output on PB3
-		}
-		else if(MATCH_COUNTER_T2 == PULSE_0_REACTIVATE_TIME){
-			PORTB &= ~(1 << PB3);						// Deactivate Output on PB3
-			PORTD |=  (1 << PD6);						// Activate Output on PD6
-			MATCH_COUNTER_T2 = PULSE_0_START_TIME;
-		}
+ISR(TIMER2_COMPA_vect){
+	if(MATCH_COUNTER_T2 == PULSE_0_START_TIME){
+		PORTB &= ~(1 << PB3);						// Deactivate Output on PB3
+		PORTD |= (1 << PD6);						// Activate Output on PD6
 	}
+	else if(MATCH_COUNTER_T2 == PULSE_2_START_TIME){
+		PORTD &= ~(1 << PD6);						// Deactivate Output on PD6
+		PORTB |= (1 << PB3);						// Activate Output on PB3
+	}
+	else if(MATCH_COUNTER_T2 == PULSE_0_REACTIVATE_TIME){
+		PORTB &= ~(1 << PB3);						// Deactivate Output on PB3
+		PORTD |=  (1 << PD6);						// Activate Output on PD6
+		MATCH_COUNTER_T2 = PULSE_0_START_TIME;
+	}
+}
 
-	ISR(TIMER2_COMPB_vect){
-		if(MATCH_COUNTER_T2 == PULSE_KILL_TIME){
-			PORTD &= ~(1 << PD6);						// Deactivate Output PD6
-		}
-		if(MATCH_COUNTER_T2 == PULSE_KILL_TIME + PULSE_2_START_TIME){
-			PORTB &= ~(1 << PB3);
-		}
-		MATCH_COUNTER_T2++;
+ISR(TIMER2_COMPB_vect){
+	if(MATCH_COUNTER_T2 == PULSE_KILL_TIME){
+		PORTD &= ~(1 << PD6);						// Deactivate Output PD6
 	}
+	if(MATCH_COUNTER_T2 == PULSE_KILL_TIME + PULSE_2_START_TIME){
+		PORTB &= ~(1 << PB3);
+	}
+	MATCH_COUNTER_T2++;
+}
 	
-#endif
-
 /*** Analog to Digital Conversion Complete Interrupt ***/
 ISR(ADC_vect){
 	

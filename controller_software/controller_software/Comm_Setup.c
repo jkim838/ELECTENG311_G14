@@ -55,41 +55,6 @@ void usart_transmit(uint8_t data){
 	
 }
 
-unsigned char usart_receive(){
-	while(RX_INCOMPLETE);		// Wait for data to be received.
-	return UDR0;
-}
-
-void usart_obtain_req(uint8_t (*target_array)[3], unsigned char(*usart_RX)[27]){
-	
-	uint8_t RX_index = 0;
-	bool stop_loop = false;
-	while (stop_loop == false){
-		if(*usart_RX[RX_index] - '0'  == ':' && *usart_RX[RX_index + 1] - '0' == '"'){
-			if(*usart_RX[RX_index + 3] - '0' == '"'){
-				// Check if the RX sequence has one digits (i.e. sequence should have closer " after three indexes)
-				*target_array[2] = 0;	// Assign zero to empty digit
-				*target_array[1] = 0;	// Assign zero to empty digit
-				*target_array[0] = usart_RX[RX_index + 2] - '0'; // convert back to numerals
-			}
-			else if(*usart_RX[RX_index + 4] == '"'){
-				// Check if the RX sequence has two digits (i.e. sequence should have closer " after four indexes)
-				*target_array[2] = 0;	// Assign zero to empty digit
-				*target_array[1] = usart_RX[RX_index + 2] - '0'; // convert back to numerals
-				*target_array[0] = usart_RX[RX_index + 3] - '0'; // convert back to numerals
-			}
-			else if(*usart_RX[RX_index + 5] - '0' == '"'){
-				// Check if the RX sequence has three digits (i.e. sequence should have closer " after five indexes)
-				*target_array[2] = usart_RX[RX_index + 2] - '0'; // convert back to numerals
-				*target_array[1] = usart_RX[RX_index + 3] - '0'; // convert back to numerals
-				*target_array[0] = usart_RX[RX_index + 4] - '0'; // convert back to numerals
-			}
-			stop_loop = true;
-		}
-	}
-	
-}
-
 void usart_TX_data(uint8_t communication_type){
 	
 	// Slave to Master Communication
