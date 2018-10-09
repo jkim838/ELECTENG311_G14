@@ -65,7 +65,7 @@ void adc_init(){
 	
 }
 
-double debug_adc_digitize(uint16_t debug_raw_output){
+double adc_digitize(uint16_t debug_raw_output){
 	
 	double digitized_ADC_output = (double) debug_raw_output * ADC_REFERENCE_VOLTAGE / ADC_RESOLUTION;
 	return digitized_ADC_output;

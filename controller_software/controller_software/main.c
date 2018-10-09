@@ -94,17 +94,10 @@ int main(void){
     /* Main Loop */
     while (1) {
 		
-
-		// Fetch Parameters...
-		#ifdef ADC_DEBUG_MODE
-			// try analog to digital conversion on the ADC, and display its output to the PuTTy.
-			double digitized_adc_output_PC0 = debug_adc_digitize(raw_ADC_output_PC0);
-			double digitized_adc_output_PC5 = debug_adc_digitize(raw_ADC_output_PC5);
-			double expected_power = calculate_power(digitized_adc_output_PC0, debug_COIL_CURRENT, debug_PWM_LIVE_TIME, debug_PWM_PERIOD);
-		#endif
 		// When buffer is filled with info.
 		if(RX_sequence_complete){
 			bool req_found = false;
+			bool clear_error = false;
 			uint16_t numerical_req;
 			uint8_t digitized_req[3];
 			//Verify Motor ID...
@@ -140,8 +133,11 @@ int main(void){
 							digitized_req[2] = (RX_buffer[i + 6]);
 						}
 					}
-						
-					//check if "error clear" is present...
+					
+					if(RX_buffer[i] == 'r' && (RX_buffer[i + 1] == '"') && (RX_buffer[i + 2] == ':')&&(RX_buffer[i + 4] == 'e')&&(RX_buffer[i + 5] == 'w')){
+						//clear error warning is present...
+						clear_error = true;
+					}
 						
 				}
 					
@@ -207,19 +203,34 @@ int main(void){
 				}
 				
 				/*** Transmit Report Description ***/
+						// Fetch Parameters...
+				#ifdef ADC_DEBUG_MODE
+					// try analog to digital conversion on the ADC, and display its output to the PuTTy.
+					double coil_voltage = calculate_voltage(adc_digitize(raw_ADC_output_PC0));
+					double coil_current = calculate_current(adc_digitize(raw_ADC_output_PC5)) * 1000;
+					double expected_power = calculate_power(raw_ADC_output_PC0, debug_COIL_CURRENT, (PULSE_KILL_TIME / 1000), (0.5 * PULSE_0_REACTIVATE_TIME));
+				#endif
 				uint8_t MOTOR_ID = RX_buffer[2] - '0';
 				uint8_t Current_FL = (200 * PULSE_KILL_TIME) / (0.3 * PULSE_0_REACTIVATE_TIME);
-
-				printf("{\n");
-				printf("""%d"":\n", MOTOR_ID);
-				printf("{\n");
-				printf("""mfc"":{""req"":""%d"",""cur"":""%d""},\n""ver:""""1.3.3"",\n", numerical_req, Current_FL);
-				printf("""param"":{""pwr"":""%f.1W"",""freq"":""%f.0Hz"",""curr"":""%f.0mA"",""volt"":""%f.2V""},\n", expected_power, digitized_adc_output_PC0, digitized_adc_output_PC5);
-				printf("""clr"":""ew"",\n");
-				printf("""ew"":[""cmprStalled"",""blockedDuct""]\n");
-				printf("}\n");
-				printf("}\n");
+				double frequency = (1 / (0.5 * PULSE_0_REACTIVATE_TIME)) * 1000;
+				printf("{");
+				printf("\"%d\":", MOTOR_ID);
+				printf("{");
+				printf("\"mfc\":{\"req"":\"%d%d%d\",\"cur\":\"%d\"},\"ver:\"\"001.003.005"",", digitized_req[0],digitized_req[1],digitized_req[2], Current_FL);
+				printf("\"param\":{\"pwr\":\"%0.2fW\",\"freq\":\"%0.1fHz\",\"curr\":\"%0.0fmA\",\"volt\":\"%0.2fV\"},", expected_power, frequency, coil_current, coil_voltage);
+				if(!clear_error){
+					printf("\"clr\":\"ew\",");
+					printf("\"ew\":[\"cmprStalled\",\"blockedDuct\"]");	
+				}
+				else{
+					printf("           "); // eleven spaces
+					printf("                                  "); //31 spaces
+				}
+				printf("}");
+				printf("}");
 				
+				// just to make the terminal look nicer...
+				printf("\n");
 				// When all the procedures with the sequence is complete...
 				RX_sequence_complete = false;
 			}

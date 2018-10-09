@@ -15,4 +15,4 @@ uint8_t ADC_next_channel;
 
 /*** Function Prototypes ***/
 void adc_init();
-double debug_adc_digitize(uint16_t debug_raw_output);
+double adc_digitize(uint16_t debug_raw_output);
