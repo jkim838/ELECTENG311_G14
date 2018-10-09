@@ -66,32 +66,49 @@ int usart_printf(char var, FILE *stream){
 
 }
 
-void usart_TX_data(uint8_t communication_type){
+void usart_TX_data(uint8_t MOTOR_ID, uint8_t Current_FL, uint16_t numerical_req, double frequency, double expected_power, double coil_current, double coil_voltage, bool req_found, bool clear_error, bool error_collision, bool error_jammed){
 	
 	// Slave to Master Communication
-	usart_transmit('{'); usart_transmit('"'); usart_transmit('3'); usart_transmit('"');
-	usart_transmit('{'); usart_transmit('"'); usart_transmit('m'); usart_transmit('f'); usart_transmit('c'); usart_transmit('"'); usart_transmit(':');
-	usart_transmit('{'); usart_transmit('"'); usart_transmit('r'); usart_transmit('e'); usart_transmit('q'); usart_transmit('"'); usart_transmit(':');
-	usart_transmit('"'); usart_transmit('X'); usart_transmit('X'); usart_transmit('X'); usart_transmit('"'); usart_transmit(',');
-	usart_transmit('"'); usart_transmit('c'); usart_transmit('u'); usart_transmit('r'); usart_transmit('"'); usart_transmit(':');
-	usart_transmit('"'); usart_transmit('X'); usart_transmit('X'); usart_transmit('X'); usart_transmit('"'); usart_transmit('}');
-	usart_transmit('"'); usart_transmit('v'); usart_transmit('e'); usart_transmit('r'); usart_transmit('"'); usart_transmit(':');
-	usart_transmit('"'); usart_transmit('X'); usart_transmit('X'); usart_transmit('X'); usart_transmit('"'); usart_transmit(',');
-	usart_transmit('"'); usart_transmit('p'); usart_transmit('a'); usart_transmit('r'); usart_transmit('a'); usart_transmit('m'); usart_transmit('"'); usart_transmit(':'); usart_transmit('{');
-	usart_transmit('"'); usart_transmit('p'); usart_transmit('w'); usart_transmit('r'); usart_transmit('"'); usart_transmit(':');
-	usart_transmit('"'); usart_transmit('X'); usart_transmit('.'); usart_transmit('X'); usart_transmit('X'); usart_transmit('W'); usart_transmit('"'); usart_transmit(',');
-	usart_transmit('"'); usart_transmit('f'); usart_transmit('r'); usart_transmit('e'); usart_transmit('q'); usart_transmit('"'); usart_transmit(':');
-	usart_transmit('"'); usart_transmit('X'); usart_transmit('.'); usart_transmit('X'); usart_transmit('X'); usart_transmit('H'); usart_transmit('z'); usart_transmit('"'); usart_transmit(',');
-	usart_transmit('"'); usart_transmit('c'); usart_transmit('u'); usart_transmit('r'); usart_transmit('r'); usart_transmit('"'); usart_transmit(':');
-	usart_transmit('"'); usart_transmit('X'); usart_transmit('X'); usart_transmit('m'); usart_transmit('A'); usart_transmit('"'); usart_transmit(',');
-	usart_transmit('"'); usart_transmit('v'); usart_transmit('o'); usart_transmit('l'); usart_transmit('t'); usart_transmit('"'); usart_transmit(':');
-	usart_transmit('"'); usart_transmit('X'); usart_transmit('X'); usart_transmit('.'); usart_transmit('X'); usart_transmit('X'); usart_transmit('V'); usart_transmit('"'); usart_transmit('}'); usart_transmit(',');
-	usart_transmit('"'); usart_transmit('c'); usart_transmit('l'); usart_transmit('r'); usart_transmit('"'); usart_transmit(':'); usart_transmit('"'); usart_transmit('e'); usart_transmit('w'); usart_transmit('"'); usart_transmit(',');
-	usart_transmit('"'); usart_transmit('e'); usart_transmit('w'); usart_transmit('"'); usart_transmit(':'); usart_transmit('['); 
-	usart_transmit('"'); usart_transmit('c'); usart_transmit('m'); usart_transmit('p'); usart_transmit('S'); usart_transmit('T'); usart_transmit('a'); usart_transmit('l'); usart_transmit('l'); usart_transmit('e'); usart_transmit('d'); usart_transmit('"'); usart_transmit(',');
-	usart_transmit('"'); usart_transmit('p'); usart_transmit('i'); usart_transmit('s'); usart_transmit('t'); usart_transmit('o'); usart_transmit('n'); usart_transmit('C'); usart_transmit('o'); usart_transmit('l'); usart_transmit('l'); usart_transmit('i'); usart_transmit('s'); usart_transmit('i'); usart_transmit('o'); usart_transmit('n'); usart_transmit('"'); usart_transmit(']'); usart_transmit(',');
-	usart_transmit('}');
-	usart_transmit('}');
-
+	// Transmit Report...
+	printf("{");
+	printf("\"%d\":", MOTOR_ID);
+	printf("{");
+	if(req_found){
+		// If new flow rate command was specified in the master-slave input, then print the following...
+		printf("\"mfc\":{\"req"":\"%d\",\"cur\":\"%d\"},\"ver:\"\"001.003.005"",", numerical_req, Current_FL);
+	}
+	else{
+		// If no new flow rate command was specified or overflew in the master-slave input, then flow rate should be "000"...
+		printf("\"mfc\":{\"req"":\"%d%d%d\",\"cur\":\"%d\"},\"ver:\"\"001.003.005"",", 0,0,0, Current_FL);
+	}
+	// Display operating conditions...
+	printf("\"param\":{\"pwr\":\"%0.2fW\",\"freq\":\"%0.1fHz\",\"curr\":\"%0.1fA\",\"volt\":\"%0.2fV\"},", expected_power, frequency, coil_current, coil_voltage);
+	// if error is not cleared, when there are either of errors present...
+	if(!clear_error && (error_collision || error_jammed)){
+		// display error clearance message...
+		printf("\"clr\":\"ew\",");
+		// if only collision happend...
+		if(!error_jammed && error_collision){
+			printf("\"ew\":[\"           \",\"pistonCollision\"]");
+		}
+		// if only jam happend...
+		else if(error_jammed && !error_collision){
+			printf("\"ew\":[\"cmprStalled\",\"               \"]");
+		}
+		// if both happend...
+		else if(error_jammed && error_collision){
+			printf("\"ew\":[\"cmprStalled\",\"pistonCollision\"]");
+		}
+	}
+	// if error is cleared by the user, OR no errors are present in the system...
+	else if(clear_error || (!error_jammed && !error_collision)){
+		printf("           "); // eleven spaces
+		printf("                                  "); //31 spaces
+	}
+	printf("}");
+	printf("}");
+	
+	// just to make the terminal look nicer...
+	printf("\n");
 	
 }

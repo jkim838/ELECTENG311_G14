@@ -42,7 +42,7 @@
 	#define debug_UBRR F_CPU / 16 / BAUD_RATE -1
 	#define PB_SW_IS_LOW ~PIND & (1 << PB7)				// Xplained Mini On-board Switch
 #endif
-#define ENABLE_DEBUGGING_PARAMETER						// Enables placeholder parameters
+//#define ENABLE_DEBUGGING_PARAMETER						// Enables placeholder parameters
 #define XPLAINED_MINI_LED_STROBE						// Enables LED Light on Xplained Mini Board (PB5) to strobe while the program is functional.
 /* Timer Debugger Definitions */
 #define TIMER_DEBUG_MODE

@@ -98,6 +98,7 @@ int main(void){
 		if(RX_sequence_complete){
 			bool req_found = false;
 			bool clear_error = false;
+			
 			uint16_t numerical_req;
 			uint8_t digitized_req[3];
 			//Verify Motor ID...
@@ -159,16 +160,7 @@ int main(void){
 				*/
 					
 				// Finished reading through the buffer...
-				// For testing purposes, print out the acquired "req" to the putty.
 				numerical_req = (digitized_req[0]-'0') * 100 + (digitized_req[1]-'0') * 10 + (digitized_req[2]-'0');
-				
-				#ifdef TRANSMIT_DEBUG_MODE	
-					for(uint8_t i = 0; i< 3; i++){
-						usart_transmit(digitized_req[i]);
-					}
-					usart_transmit('\r');
-				#endif
-
 				// Apply new operating condition to the machine
 				// Only change stroke frequency when REQ is acquired...
 				if(req_found){
@@ -203,46 +195,41 @@ int main(void){
 				}
 				
 				/*** Transmit Report Description ***/
-						// Fetch Parameters...
-				#ifdef ADC_DEBUG_MODE
-					// try analog to digital conversion on the ADC, and display its output to the PuTTy.
-					double coil_voltage = calculate_voltage(adc_digitize(raw_ADC_output_PC0));
-					double coil_current = calculate_current(adc_digitize(raw_ADC_output_PC5));
-					double expected_power = calculate_power(coil_voltage, debug_COIL_CURRENT, PULSE_KILL_TIME, PULSE_2_START_TIME);
-				#endif
-				uint8_t MOTOR_ID = RX_buffer[2] - '0';
-				uint8_t Current_FL = (200 * PULSE_KILL_TIME) / (0.3 * PULSE_0_REACTIVATE_TIME);
-				double frequency = (1 / (0.5 * PULSE_0_REACTIVATE_TIME)) * 1000;
-				printf("{");
-				printf("\"%d\":", MOTOR_ID);
-				printf("{");
-				if(req_found){
-					printf("\"mfc\":{\"req"":\"%d%d%d\",\"cur\":\"%d\"},\"ver:\"\"001.003.005"",", digitized_req[0]-'0',digitized_req[1]-'0',digitized_req[2]-'0', Current_FL);
-				}
-				else{
-					printf("\"mfc\":{\"req"":\"%d%d%d\",\"cur\":\"%d\"},\"ver:\"\"001.003.005"",", 0,0,0, Current_FL);
-				}
-				printf("\"param\":{\"pwr\":\"%0.2fW\",\"freq\":\"%0.1fHz\",\"curr\":\"%0.4fA\",\"volt\":\"%0.2fV\"},", expected_power, frequency, coil_current, coil_voltage);
-				if(!clear_error){
-					printf("\"clr\":\"ew\",");
-					printf("\"ew\":[\"cmprStalled\",\"blockedDuct\"]");	
-				}
-				else{
-					printf("           "); // eleven spaces
-					printf("                                  "); //31 spaces
-				}
-				printf("}");
-				printf("}");
+				/* This section of the code prepares parameters and prepares a report to master system. The content of the output
+				varies on the master-slave input.
 				
-				// just to make the terminal look nicer...
-				printf("\n");
+				When no "Req" was defined, or if "Req" was greater than 256 in the master-slave input, the corresponding report 
+				will return "000". Otherwise, the program will return   
+				*/
+				// Analog to Digital conversion on the ADC, and display its output to the PuTTy.
+				double coil_voltage = calculate_voltage(adc_digitize(raw_ADC_output_PC0));
+				double coil_current = calculate_current(adc_digitize(raw_ADC_output_PC5));
+				double expected_power = calculate_power(coil_voltage, debug_COIL_CURRENT, PULSE_KILL_TIME, PULSE_2_START_TIME);
+				
+				#ifdef ENABLE_DEBUGGING_PARAMETER
+					bool error_collision = false;
+					bool error_jammed = true;
+				#else
+					bool error_collision = false;
+					bool error_jammed = false;
+				#endif
+				
+				// Fetch Motor ID from the buffer...
+				uint8_t MOTOR_ID = RX_buffer[2] - '0';
+				// Fetch Current Flow Rate from operating conditions...
+				uint8_t Current_FL = (200 * PULSE_KILL_TIME) / (0.3 * PULSE_0_REACTIVATE_TIME);
+				// Fetch frequency from pulse reactivation time...
+				double frequency = (1 / (0.5 * PULSE_0_REACTIVATE_TIME)) * 1000;
+				
+				// Transmit Report...
+				usart_TX_data(MOTOR_ID, Current_FL, numerical_req, frequency, expected_power, coil_current, coil_voltage, req_found, clear_error, error_collision, error_jammed);
 				// When all the procedures with the sequence is complete...
 				RX_sequence_complete = false;
 			}
 			else{
 				// Wrong MOTOR ID is provided. Print Error Message.
 				printf_value = RX_buffer[2];
-				printf("VIOLATION: MOTOR ID '%d'\n", printf_value -'0');
+				printf("VIOLATION: WRONG MOTOR ID '%d'\n", printf_value -'0');
 				RX_sequence_complete = false;
 			}
 		}
