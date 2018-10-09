@@ -184,7 +184,9 @@ int main(void){
 					}
 					// If command is between 178 to 254, set frequency to 15Hz, calculate the DUTY CYCLE equivalent...
 					else if(numerical_req < TIMER_MAX && numerical_req != TIMER_MAX && numerical_req >= TIMER_HIGH_FLOW){
-							
+						PULSE_0_REACTIVATE_TIME = 133;
+						PULSE_2_START_TIME = 67;
+						PULSE_KILL_TIME = ((double)(0.3 * numerical_req) * PULSE_0_REACTIVATE_TIME)/200; //need to update this line... does more duty cycle produce more stroke distance?		
 					}
 					// If command is invalid, reset to default frequency...
 					else{
@@ -216,10 +218,18 @@ int main(void){
 				
 				// Fetch Motor ID from the buffer...
 				uint8_t MOTOR_ID = RX_buffer[2] - '0';
-				// Fetch Current Flow Rate from operating conditions...
-				uint8_t Current_FL = (200 * PULSE_KILL_TIME) / (0.3 * PULSE_0_REACTIVATE_TIME);
 				// Fetch frequency from pulse reactivation time...
 				double frequency = (1 / (0.5 * PULSE_0_REACTIVATE_TIME)) * 1000;
+				// Fetch Current Flow Rate from operating conditions...
+				uint8_t Current_FL;
+				// If the motor is running at low output mode OR no output mode...
+				if(frequency <= 10){
+					Current_FL = (200 * PULSE_KILL_TIME) / (0.3 * PULSE_0_REACTIVATE_TIME);
+				}
+				// If the motor is running at high output mode OR maximum output mode..
+				else if(frequency >= 15){
+					Current_FL = (200 * PULSE_KILL_TIME) / (0.3 * PULSE_0_REACTIVATE_TIME) + 85; // This needs to be updated as equations for HIGH output mode becomes complete...
+				}
 				
 				// Transmit Report...
 				usart_TX_data(MOTOR_ID, Current_FL, numerical_req, frequency, expected_power, coil_current, coil_voltage, req_found, clear_error, error_collision, error_jammed);
