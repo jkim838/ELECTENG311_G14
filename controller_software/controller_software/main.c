@@ -133,7 +133,7 @@ int main(void){
 							digitized_req[2] = (RX_buffer[i + 6]);
 						}
 					}
-					
+										
 					if(RX_buffer[i] == 'r' && (RX_buffer[i + 1] == '"') && (RX_buffer[i + 2] == ':')&&(RX_buffer[i + 4] == 'e')&&(RX_buffer[i + 5] == 'w')){
 						//clear error warning is present...
 						clear_error = true;
@@ -207,7 +207,7 @@ int main(void){
 				#ifdef ADC_DEBUG_MODE
 					// try analog to digital conversion on the ADC, and display its output to the PuTTy.
 					double coil_voltage = calculate_voltage(adc_digitize(raw_ADC_output_PC0));
-					double coil_current = calculate_current(adc_digitize(raw_ADC_output_PC5)) * 1000;
+					uint16_t coil_current = calculate_current(adc_digitize(raw_ADC_output_PC5)) * 1000;
 					double expected_power = calculate_power(raw_ADC_output_PC0, debug_COIL_CURRENT, (PULSE_KILL_TIME / 1000), (0.5 * PULSE_0_REACTIVATE_TIME));
 				#endif
 				uint8_t MOTOR_ID = RX_buffer[2] - '0';
@@ -216,8 +216,13 @@ int main(void){
 				printf("{");
 				printf("\"%d\":", MOTOR_ID);
 				printf("{");
-				printf("\"mfc\":{\"req"":\"%d%d%d\",\"cur\":\"%d\"},\"ver:\"\"001.003.005"",", digitized_req[0],digitized_req[1],digitized_req[2], Current_FL);
-				printf("\"param\":{\"pwr\":\"%0.2fW\",\"freq\":\"%0.1fHz\",\"curr\":\"%0.0fmA\",\"volt\":\"%0.2fV\"},", expected_power, frequency, coil_current, coil_voltage);
+				if(req_found){
+					printf("\"mfc\":{\"req"":\"%d%d%d\",\"cur\":\"%d\"},\"ver:\"\"001.003.005"",", digitized_req[0]-'0',digitized_req[1]-'0',digitized_req[2]-'0', Current_FL);
+				}
+				else{
+					printf("\"mfc\":{\"req"":\"%d%d%d\",\"cur\":\"%d\"},\"ver:\"\"001.003.005"",", 0,0,0, Current_FL);
+				}
+				printf("\"param\":{\"pwr\":\"%0.2fW\",\"freq\":\"%0.1fHz\",\"curr\":\"%dmA\",\"volt\":\"%0.2fV\"},", expected_power, frequency, coil_current, coil_voltage);
 				if(!clear_error){
 					printf("\"clr\":\"ew\",");
 					printf("\"ew\":[\"cmprStalled\",\"blockedDuct\"]");	
