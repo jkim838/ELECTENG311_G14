@@ -55,9 +55,8 @@ volatile bool RX_sequence_complete = false;							// Flow rate request will be r
 
 /*** Global Variable Definitions ***/
 #ifdef TRANSMIT_DEBUG_MODE
+	static FILE printf_stdout = FDEV_SETUP_STREAM(usart_printf, NULL, _FDEV_SETUP_WRITE);
 #else
-	int usart_putchar_printf(char var, FILE *stream);
-	static FILE mystdout = FDEV_SETUP_STREAM(usart_putchar_printf, NULL, _FDEV_SETUP_WRITE);
 #endif
 
 #ifdef ADC_DEBUG_MODE
@@ -84,11 +83,10 @@ int main(void){
 	timer2_init();	// Set up Timer 0 for Pulse Modulation
 	adc_init();		// Set up ADC
 	#ifdef TRANSMIT_DEBUG_MODE
+		uint8_t printf_value;
+		stdout = &printf_stdout;
 		usart_init(UBRR_VALUE);
 	#else
-		stdout = &mystdout;
-		// enable USART for transmitting digital conversion result to PuTTy...
-		debug_usart_init(debug_UBRR);
 	#endif
 	
 	sei();
@@ -96,78 +94,143 @@ int main(void){
     /* Main Loop */
     while (1) {
 		
-		#ifdef TRANSMIT_DEBUG_MODE
-		//debug mode... ignore normal operational cycle
-			// Fetch Parameters...
 
-			#ifdef ADC_DEBUG_MODE
-				// try analog to digital conversion on the ADC, and display its output to the PuTTy.
-				double digitized_adc_output_PC0 = debug_adc_digitize(raw_ADC_output_PC0);
-				double digitized_adc_output_PC5 = debug_adc_digitize(raw_ADC_output_PC5);
-				double expected_power = calculate_power(digitized_adc_output_PC0, debug_COIL_CURRENT, debug_PWM_LIVE_TIME, debug_PWM_PERIOD);
-			#endif
-			// When buffer is filled with info.
-			if(RX_sequence_complete){
-				uint16_t numerical_req;
-				uint8_t digitized_req[3];
-				//Verify Motor ID...
-				if(RX_buffer[0] == '{' && RX_buffer[1] == '"' && RX_buffer[2] == '3' && RX_buffer[3] == '"' && RX_buffer[4] == ':'){
-					for(uint8_t i = 0; i < JSON_FIXED_BUFFER_SIZE; i++){
-						//check if "req" is present...
-						if((RX_buffer[i]) == 'q' && (RX_buffer[i + 1]) == '"' && (RX_buffer[i + 2]) == ':' && (RX_buffer[i + 3]) == '"'){
-							// req is present
-							if(RX_buffer[i + 5] == '"'){
-								digitized_req[0] = 0;
-								digitized_req[1] = 0;
-								digitized_req[2] = (RX_buffer[i + 4]);
-							}
-							else if(RX_buffer[i + 6] == '"'){
-								digitized_req[0] = 0;
-								digitized_req[1] = (RX_buffer[i + 4]);
-								digitized_req[2] = (RX_buffer[i + 5]);
-							}
-							else if(RX_buffer[i + 7] == '"'){
-								digitized_req[0] = (RX_buffer[i + 4]);
-								digitized_req[1] = (RX_buffer[i + 5]);
-								digitized_req[2] = (RX_buffer[i + 6]);
-							}
+		// Fetch Parameters...
+		#ifdef ADC_DEBUG_MODE
+			// try analog to digital conversion on the ADC, and display its output to the PuTTy.
+			double digitized_adc_output_PC0 = debug_adc_digitize(raw_ADC_output_PC0);
+			double digitized_adc_output_PC5 = debug_adc_digitize(raw_ADC_output_PC5);
+			double expected_power = calculate_power(digitized_adc_output_PC0, debug_COIL_CURRENT, debug_PWM_LIVE_TIME, debug_PWM_PERIOD);
+		#endif
+		// When buffer is filled with info.
+		if(RX_sequence_complete){
+			bool req_found = false;
+			uint16_t numerical_req;
+			uint8_t digitized_req[3];
+			//Verify Motor ID...
+			if(RX_buffer[0] == '{' && RX_buffer[1] == '"' && RX_buffer[2] == '3' && RX_buffer[3] == '"' && RX_buffer[4] == ':'){
+				// read through buffer contents
+				for(uint8_t i = 0; i < JSON_FIXED_BUFFER_SIZE; i++){
+						
+					/*** Flow Rate Command Acquisition Description ***/
+					/* This section of the code is only run when the correct Motor ID was provided from the master system.
+					As the program reads through the entire character buffer, it tries to find the match between the 
+					string q": from the full pattern "req:". Once this string pattern is found, then status "req_found"
+					is set to true. Knowing the position of command value in the fixed JSON structure, the program will
+					fetch and store each of its digits into an array "digitized_req".
+					*/
+						
+					//check if "req" is present...
+					if((RX_buffer[i]) == 'q' && (RX_buffer[i + 1]) == '"' && (RX_buffer[i + 2]) == ':' && (RX_buffer[i + 3]) == '"'){
+						// req is present
+						req_found = true;
+						if(RX_buffer[i + 5] == '"'){
+							digitized_req[0] = 0;
+							digitized_req[1] = 0;
+							digitized_req[2] = (RX_buffer[i + 4]);
+						}
+						else if(RX_buffer[i + 6] == '"'){
+							digitized_req[0] = 0;
+							digitized_req[1] = (RX_buffer[i + 4]);
+							digitized_req[2] = (RX_buffer[i + 5]);
+						}
+						else if(RX_buffer[i + 7] == '"'){
+							digitized_req[0] = (RX_buffer[i + 4]);
+							digitized_req[1] = (RX_buffer[i + 5]);
+							digitized_req[2] = (RX_buffer[i + 6]);
 						}
 					}
-					// For testing purposes, print out the acquired "req" to the putty.
-					numerical_req = (digitized_req[0]-'0') * 100 + (digitized_req[1]-'0') * 10 + (digitized_req[2]-'0');
+						
+					//check if "error clear" is present...
+						
+				}
+					
+				/*** Flow Rate Application Description ***/
+				/* This section of the code is only run when the correct Motor ID was provided from the master system, and the
+				program was able to acquire new flow rate command from the character buffer. There are five modes of operation:
+				MAXIMUM, MINIMUM (NO OUTPUT), LOW FLOW, HIGH FLOW and OVERFLOW.
+					
+				MAXIMUM MODE: The timed-pulse output changes to maximum output mode when the flow rate command is equal to 255.
+				MINIMUM MODE: The timed-pulse output changes to minimum output mode when the flow rate command is equal to zero.
+				LOW FLOW MODE: The timed-pulse output changes to low flow mode when the flow rate command is between 1 to 177.
+								The output is set to 10Hz. Its duty cycle (and hence stroke distance) changes as flow rate command
+								becomes larger.
+				HIGH FLOW MODE: The timed-pulse output changes to high output mode when the flow rate command is between 178 to
+					            254. The output is set to 15Hz. Its duty cycle (and hence stroke distance) changes as flow rate
+								command becomes larger.
+				OVERFLOW MODE: The timed-pulse output changes to overflow mode when the flow rate command does not fall into any 
+								of the specified region. The output is set to default mode (10Hz, 50% Duty Cycle).    
+				*/
+					
+				// Finished reading through the buffer...
+				// For testing purposes, print out the acquired "req" to the putty.
+				numerical_req = (digitized_req[0]-'0') * 100 + (digitized_req[1]-'0') * 10 + (digitized_req[2]-'0');
+				
+				#ifdef TRANSMIT_DEBUG_MODE	
 					for(uint8_t i = 0; i< 3; i++){
 						usart_transmit(digitized_req[i]);
 					}
+					usart_transmit('\r');
+				#endif
+
+				// Apply new operating condition to the machine
+				// Only change stroke frequency when REQ is acquired...
+				if(req_found){
+					// If command is "MAXIMUM OUTPUT"...
 					if(numerical_req == TIMER_MAX){
-						PULSE_0_REACTIVATE_TIME = 80;
-						PULSE_2_START_TIME = 40;
-						PULSE_KILL_TIME = 10;
+						PULSE_0_REACTIVATE_TIME = 133;
+						PULSE_2_START_TIME = 67;
+						PULSE_KILL_TIME = 34;
 					}
+					// If command is "NO OUTPUT"...
 					else if(numerical_req == TIMER_LOW){
 						PULSE_0_REACTIVATE_TIME = 200;
 						PULSE_2_START_TIME = 100;
 						PULSE_KILL_TIME = 0;
 					}
+					// If command is between 1 to 177, set frequency to 10Hz, calculate the DUTY CYCLE equivalent...
 					else if(numerical_req > TIMER_LOW && numerical_req != TIMER_LOW && numerical_req <= TIMER_LOW_FLOW){
 						PULSE_0_REACTIVATE_TIME = 200;
 						PULSE_2_START_TIME = 100;
 						PULSE_KILL_TIME = ((double)(0.3 * numerical_req) * PULSE_0_REACTIVATE_TIME)/200;
 					}
+					// If command is between 178 to 254, set frequency to 15Hz, calculate the DUTY CYCLE equivalent...
 					else if(numerical_req < TIMER_MAX && numerical_req != TIMER_MAX && numerical_req >= TIMER_HIGH_FLOW){
-						
+							
 					}
+					// If command is invalid, reset to default frequency...
 					else{
-						PULSE_0_REACTIVATE_TIME = 200;
-						PULSE_2_START_TIME = 100;
-						PULSE_KILL_TIME = 50;
+						PULSE_0_REACTIVATE_TIME = 80;
+						PULSE_2_START_TIME = 40;
+						PULSE_KILL_TIME = 20;
 					}
-					RX_sequence_complete = false;
 				}
+				
+				/*** Transmit Report Description ***/
+				uint8_t MOTOR_ID = RX_buffer[2] - '0';
+				uint8_t Current_FL = (200 * PULSE_KILL_TIME) / (0.3 * PULSE_0_REACTIVATE_TIME);
+
+				printf("{\n");
+				printf("""%d"":\n", MOTOR_ID);
+				printf("{\n");
+				printf("""mfc"":{""req"":""%d"",""cur"":""%d""},\n""ver:""""1.3.3"",\n", numerical_req, Current_FL);
+				printf("""param"":{""pwr"":""%f.1W"",""freq"":""%f.0Hz"",""curr"":""%f.0mA"",""volt"":""%f.2V""},\n", expected_power, digitized_adc_output_PC0, digitized_adc_output_PC5);
+				printf("""clr"":""ew"",\n");
+				printf("""ew"":[""cmprStalled"",""blockedDuct""]\n");
+				printf("}\n");
+				printf("}\n");
+				
+				// When all the procedures with the sequence is complete...
+				RX_sequence_complete = false;
 			}
+			else{
+				// Wrong MOTOR ID is provided. Print Error Message.
+				printf_value = RX_buffer[2];
+				printf("VIOLATION: MOTOR ID '%d'\n", printf_value -'0');
+				RX_sequence_complete = false;
+			}
+		}
 
-		#else
-
-		#endif
 		
 		#ifdef XPLAINED_MINI_LED_STROBE
 			PORTB ^= (1 << PB5);

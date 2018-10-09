@@ -13,3 +13,4 @@
 void usart_init(uint16_t UBRR);
 void usart_transmit(uint8_t data);
 void usart_TX_data(uint8_t communication_type);
+int usart_printf(char var, FILE *stream);

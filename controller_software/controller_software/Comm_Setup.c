@@ -15,6 +15,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
+#include <stdio.h>
 /*** Custom Header Files ***/
 #include "Comm_Setup.h"
 #include "Macro_Definitions.h"
@@ -53,6 +54,16 @@ void usart_transmit(uint8_t data){
 	while (DATA_REG_IS_FULL);		// Waits for the UDR register to be empty.
 	UDR0 = data;					// Transmits the data.
 	
+}
+
+int usart_printf(char var, FILE *stream){
+
+	if(var == '\n'){
+		usart_transmit('\r');
+	}
+	usart_transmit(var);
+	return 0;
+
 }
 
 void usart_TX_data(uint8_t communication_type){
