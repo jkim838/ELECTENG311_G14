@@ -207,8 +207,8 @@ int main(void){
 				#ifdef ADC_DEBUG_MODE
 					// try analog to digital conversion on the ADC, and display its output to the PuTTy.
 					double coil_voltage = calculate_voltage(adc_digitize(raw_ADC_output_PC0));
-					uint16_t coil_current = calculate_current(adc_digitize(raw_ADC_output_PC5)) * 1000;
-					double expected_power = calculate_power(raw_ADC_output_PC0, debug_COIL_CURRENT, (PULSE_KILL_TIME / 1000), (0.5 * PULSE_0_REACTIVATE_TIME));
+					double coil_current = calculate_current(adc_digitize(raw_ADC_output_PC5));
+					double expected_power = calculate_power(coil_voltage, debug_COIL_CURRENT, PULSE_KILL_TIME, PULSE_2_START_TIME);
 				#endif
 				uint8_t MOTOR_ID = RX_buffer[2] - '0';
 				uint8_t Current_FL = (200 * PULSE_KILL_TIME) / (0.3 * PULSE_0_REACTIVATE_TIME);
@@ -222,7 +222,7 @@ int main(void){
 				else{
 					printf("\"mfc\":{\"req"":\"%d%d%d\",\"cur\":\"%d\"},\"ver:\"\"001.003.005"",", 0,0,0, Current_FL);
 				}
-				printf("\"param\":{\"pwr\":\"%0.2fW\",\"freq\":\"%0.1fHz\",\"curr\":\"%dmA\",\"volt\":\"%0.2fV\"},", expected_power, frequency, coil_current, coil_voltage);
+				printf("\"param\":{\"pwr\":\"%0.2fW\",\"freq\":\"%0.1fHz\",\"curr\":\"%0.4fA\",\"volt\":\"%0.2fV\"},", expected_power, frequency, coil_current, coil_voltage);
 				if(!clear_error){
 					printf("\"clr\":\"ew\",");
 					printf("\"ew\":[\"cmprStalled\",\"blockedDuct\"]");	
@@ -246,8 +246,6 @@ int main(void){
 				RX_sequence_complete = false;
 			}
 		}
-
-		
 		#ifdef XPLAINED_MINI_LED_STROBE
 			PORTB ^= (1 << PB5);
 			_delay_ms(100);
