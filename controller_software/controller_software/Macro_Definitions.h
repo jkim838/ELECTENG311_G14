@@ -10,7 +10,7 @@
 
 /*** Custom Macro Definitions ***/
 /** Main Routine Definitions **/
-#define XPLAINED_MINI_MODE
+//#define XPLAINED_MINI_MODE
 #ifdef XPLAINED_MINI_MODE
 	#define F_CPU 16000000UL
 #else
