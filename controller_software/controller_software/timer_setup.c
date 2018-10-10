@@ -33,9 +33,9 @@ void timer2_init(){
 		TCCR2B &= ~(1 << CS20);			
 	#else
 	// The program is running at 8MHz.
-		TCCR2B |=  (1 << CS22);			// Set prescaler to 32
-		TCCR2B &= ~(1 << CS21);			// @F_CPU 8 MHz... F(Timer) = 250KHz
-		TCCR2B &= ~(1 << CS20);		    
+		TCCR2B &= ~(1 << CS22);			// Set prescaler to 32
+		TCCR2B |=  (1 << CS21);			// @F_CPU 8 MHz... F(Timer) = 250KHz
+		TCCR2B |=  (1 << CS20);		    
 	#endif
 	/*** TIMSK0: TC0 Interrupt Mask Register ***/
 	TIMSK2 |= (1 << OCIE2A);		// Timer/Counter2 Output Compare A Match Interrupt Enabled

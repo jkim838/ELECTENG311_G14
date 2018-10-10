@@ -98,11 +98,10 @@ int main(void){
 		if(RX_sequence_complete){
 			bool req_found = false;
 			bool clear_error = false;
-			
 			uint16_t numerical_req;
 			uint8_t digitized_req[3];
 			//Verify Motor ID...
-			if(RX_buffer[0] == '{' && RX_buffer[1] == '"' && RX_buffer[2] == '3' && RX_buffer[3] == '"' && RX_buffer[4] == ':'){
+			if(RX_buffer[1] == '"' && RX_buffer[2] == '3' && RX_buffer[3] == '"'){
 				// read through buffer contents
 				for(uint8_t i = 0; i < JSON_FIXED_BUFFER_SIZE; i++){
 						
@@ -234,12 +233,14 @@ int main(void){
 				// Transmit Report...
 				usart_TX_data(MOTOR_ID, Current_FL, numerical_req, frequency, expected_power, coil_current, coil_voltage, req_found, clear_error, error_collision, error_jammed);
 				// When all the procedures with the sequence is complete...
+				memset(RX_buffer, 0, sizeof RX_buffer);
 				RX_sequence_complete = false;
 			}
 			else{
 				// Wrong MOTOR ID is provided. Print Error Message.
 				printf_value = RX_buffer[2];
 				printf("VIOLATION: WRONG MOTOR ID '%d'\n", printf_value -'0');
+				memset(RX_buffer, 0, sizeof RX_buffer);
 				RX_sequence_complete = false;
 			}
 		}
