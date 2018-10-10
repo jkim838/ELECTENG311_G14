@@ -22,7 +22,6 @@
 #include "adc_setup.h"			// Contains functions used to configure ADC
 #include "calculations.h"		// Contains functions to calculate parameters
 #include "Macro_Definitions.h"  // Contains all necessary Macro definitions
-#include "mjson.h"				// Contains functions for JSON communications
 /*** Debugger Header ***/
 #ifdef TRANSMIT_DEBUG_MODE
 	#include "Comm_Setup.h"			// Contains functions to communicate between Master/Slave System.
@@ -95,7 +94,7 @@ int main(void){
     while (1) {
 		
 		// When buffer is filled with info.
-		if(RX_sequence_complete){
+		if(RX_sequence_complete){ 
 			bool req_found = false;
 			bool clear_error = false;
 			uint16_t numerical_req;
@@ -231,16 +230,18 @@ int main(void){
 				}
 				
 				// Transmit Report...
+				// disable RX while transmitting...
+				usart_toggle_RX(); 
 				usart_TX_data(MOTOR_ID, Current_FL, numerical_req, frequency, expected_power, coil_current, coil_voltage, req_found, clear_error, error_collision, error_jammed);
+				// enable RX after transmitting is finished...
+				usart_toggle_RX();
 				// When all the procedures with the sequence is complete...
-				memset(RX_buffer, 0, sizeof RX_buffer);
 				RX_sequence_complete = false;
 			}
 			else{
 				// Wrong MOTOR ID is provided. Print Error Message.
 				printf_value = RX_buffer[2];
 				printf("VIOLATION: WRONG MOTOR ID '%d'\n", printf_value -'0');
-				memset(RX_buffer, 0, sizeof RX_buffer);
 				RX_sequence_complete = false;
 			}
 		}

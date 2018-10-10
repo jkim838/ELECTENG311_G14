@@ -13,4 +13,5 @@
 void usart_init(uint16_t UBRR);
 void usart_transmit(uint8_t data);
 void usart_TX_data(uint8_t MOTOR_ID, uint8_t Current_FL, uint16_t numerical_req, double frequency, double expected_power, double coil_current, double coil_voltage, bool req_found, bool clear_error, bool error_collision, bool error_jammed);
+void usart_toggle_RX();
 int usart_printf(char var, FILE *stream);
