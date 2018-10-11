@@ -37,6 +37,7 @@
 /** Analog-Digital Converter ISR **/
 volatile uint16_t raw_coil_voltage;
 volatile uint16_t raw_coil_current;
+volatile uint8_t debug_ADC_channel;
 
 
 /** Timer/Pulse Modulation ISR **/
@@ -53,16 +54,9 @@ volatile bool RX_sequence_complete = false;							// Flow rate request will be r
 
 
 /*** Global Variable Definitions ***/
-#ifdef TRANSMIT_DEBUG_MODE
-	static FILE printf_stdout = FDEV_SETUP_STREAM(usart_printf, NULL, _FDEV_SETUP_WRITE);
-#else
-#endif
-
-#ifdef ADC_DEBUG_MODE
-	uint16_t raw_ADC_output_PC0;
-	uint16_t raw_ADC_output_PC5;
-	volatile uint8_t debug_ADC_channel;
-#endif
+static FILE printf_stdout = FDEV_SETUP_STREAM(usart_printf, NULL, _FDEV_SETUP_WRITE);
+uint16_t raw_ADC_output_PC0;
+uint16_t raw_ADC_output_PC5;
 
 int main(void){
 	
@@ -81,12 +75,10 @@ int main(void){
 	// Remove double slashes to activate...
 	timer2_init();	// Set up Timer 0 for Pulse Modulation
 	adc_init();		// Set up ADC
-	#ifdef TRANSMIT_DEBUG_MODE
-		uint8_t printf_value;
-		stdout = &printf_stdout;
-		usart_init(UBRR_VALUE);
-	#else
-	#endif
+
+	uint8_t printf_value;
+	stdout = &printf_stdout;
+	usart_init(UBRR_VALUE);
 	
 	sei();
 
