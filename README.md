@@ -1,5 +1,6 @@
 # Linear Compressor Controller Software, 2018
 #### Lead C Programmer: Oliver Kim (@jkim838, jkim838@aucklanduni.ac.nz)
+#### Hardware Contributors: Norman Peni, Samisoni Tupou, Patrick Louis Ah Wong
 #### The University of Auckland, Department of Electrical, Computer Systems and Software Engineering
 
 ## Overview
